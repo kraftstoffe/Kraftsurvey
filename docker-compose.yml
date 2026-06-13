@@ -1,6 +1,7 @@
 # Kraftstoff Survey — Coolify production (survey.kraftstoff.app)
 #
-# Coolify compose path: /docker-compose.yml
+# Canonical compose file (edit this).
+# Coolify may load docker-compose.yaml which includes this file.
 # Domain (app): https://survey.kraftstoff.app:3000
 #
 # Required environment:

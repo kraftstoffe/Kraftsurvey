@@ -1,0 +1,5 @@
+# Coolify looks for docker-compose.yaml by default.
+# Canonical compose file: docker-compose.yml (same content).
+
+include:
+  - docker-compose.yml

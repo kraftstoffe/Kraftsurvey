@@ -34,7 +34,7 @@ Propagation usually takes 5–30 minutes.
 1. **New Resource** → **Docker Compose**
 2. **Repository:** `kraftstoffe/Kraftsurvey`
 3. **Branch:** `master`
-4. **Compose file:** `docker-compose.yml`
+4. **Compose file:** `docker-compose.yml` or leave Coolify default `docker-compose.yaml` (includes `.yml`)
 5. **Server:** same server as Coach / Kraftstoff
 6. **Domain** for the `app` service:
    ```
