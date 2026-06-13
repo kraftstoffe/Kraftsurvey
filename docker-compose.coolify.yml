@@ -1,0 +1,47 @@
+# ==========================================
+# Coolify — Kraftstoff Survey (survey.kraftstoff.app)
+# ==========================================
+# Use with external Postgres from Coolify (Database resource).
+#
+# Coolify settings:
+#   Repository: kraftstoffe/Kraftsurvey
+#   Compose file: docker-compose.coolify.yml
+#   Domain (app): https://survey.kraftstoff.app:3000
+#
+# Required environment:
+#   DATABASE_URL, JWT_SECRET, NEXT_PUBLIC_APP_URL
+
+services:
+  app:
+    build:
+      context: .
+      dockerfile: Dockerfile
+      args:
+        DATABASE_URL: ${DATABASE_URL:-postgresql://build:build@127.0.0.1:5432/build}
+        JWT_SECRET: ${JWT_SECRET:-build-stub-jwt-secret-for-docker-build-only}
+        NEXT_PUBLIC_APP_URL: ${NEXT_PUBLIC_APP_URL:-https://survey.kraftstoff.app}
+    image: kraftstoff-survey:latest
+    container_name: kraftstoff-survey
+    ports:
+      - "3000:3000"
+    environment:
+      NODE_ENV: production
+      DATABASE_URL: ${DATABASE_URL}
+      JWT_SECRET: ${JWT_SECRET}
+      NEXT_PUBLIC_APP_URL: ${NEXT_PUBLIC_APP_URL:-https://survey.kraftstoff.app}
+      SERVICE_FQDN_APP_3000: ${SERVICE_FQDN_APP_3000:-}
+    healthcheck:
+      test:
+        [
+          "CMD",
+          "wget",
+          "--no-verbose",
+          "--tries=1",
+          "--spider",
+          "http://127.0.0.1:3000/api/health",
+        ]
+      interval: 30s
+      timeout: 10s
+      retries: 5
+      start_period: 60s
+    restart: unless-stopped

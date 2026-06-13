@@ -10,7 +10,19 @@ Google-Forms-ähnliche Umfrageplattform im Kraftstoff-Design.
 - **Ergebnisse** — KPIs, Charts, CSV-Export
 - **Kraftstoff Design** — Dark OLED + Lavender-Mist Light Theme
 
-## Setup
+## Production (survey.kraftstoff.app)
+
+Deploy via **Coolify** on the Kraftstoff VPS. Full guide: [`docs/DEPLOYMENT.md`](docs/DEPLOYMENT.md)
+
+Quick checklist:
+
+1. DNS: `survey.kraftstoff.app` → A → same VPS IP as `kraftstoff.app`
+2. Coolify: new Docker Compose app from `kraftstoffe/Kraftsurvey`
+3. Compose file: `docker-compose.coolify.yml`
+4. Domain: `https://survey.kraftstoff.app:3000`
+5. Env: see `env.coolify.example`
+
+## Setup (local)
 
 ### Option A — Docker (empfohlen)
 
