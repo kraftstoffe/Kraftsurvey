@@ -1,9 +1,6 @@
-# ==========================================
-# Coolify — Kraftstoff Survey (survey.kraftstoff.app)
-# ==========================================
-# Use with external Postgres from Coolify (Database resource).
+# Kraftstoff Survey — Coolify production (survey.kraftstoff.app)
 #
-# Coolify default compose path: docker-compose.yaml (see repo root)
+# Coolify default compose path: /docker-compose.yaml
 # Domain (app): https://survey.kraftstoff.app:3000
 #
 # Required environment:

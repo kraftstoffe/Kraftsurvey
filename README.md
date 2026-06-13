@@ -18,7 +18,7 @@ Quick checklist:
 
 1. DNS: `survey.kraftstoff.app` → A → same VPS IP as `kraftstoff.app`
 2. Coolify: new Docker Compose app from `kraftstoffe/Kraftsurvey`
-3. Compose file: `docker-compose.coolify.yml`
+3. Compose file: `docker-compose.yaml` (Coolify default)
 4. Domain: `https://survey.kraftstoff.app:3000`
 5. Env: see `env.coolify.example`
 
