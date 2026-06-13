@@ -18,38 +18,26 @@ Quick checklist:
 
 1. DNS: `survey.kraftstoff.app` → A → same VPS IP as `kraftstoff.app`
 2. Coolify: new Docker Compose app from `kraftstoffe/Kraftsurvey`
-3. Compose file: `docker-compose.yaml` (Coolify default)
+3. Compose file: `docker-compose.yml`
 4. Domain: `https://survey.kraftstoff.app:3000`
 5. Env: see `env.coolify.example`
 
 ## Setup (local)
 
-### Option A — Docker (empfohlen)
+### Option A — Docker (local dev)
 
 ```bash
-cp .env.example .env
-# JWT_SECRET in .env anpassen (optional)
-npm run docker:up
+docker compose -f docker-compose.dev.yml up -d --build
+# or: npm run docker:up
 ```
 
-App: [http://localhost:3000](http://localhost:3000)
+### Option B — Coolify (production)
 
-```bash
-npm run docker:logs   # Logs
-npm run docker:down   # Stoppen
-```
+Compose file in Coolify: **`docker-compose.yml`**
 
-### Option B — Lokal mit Node
+See [`docs/DEPLOYMENT.md`](docs/DEPLOYMENT.md).
 
-PostgreSQL muss laufen (z. B. nur DB via Docker):
-
-```bash
-docker compose up -d postgres
-cp .env.example .env
-npm install
-npm run db:push
-npm run dev
-```
+## Setup (local Node)
 
 ## Umgebungsvariablen
 

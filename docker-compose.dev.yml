@@ -1,0 +1,44 @@
+# Kraftstoff Survey — local development
+#
+# Start:  docker compose -f docker-compose.dev.yml up -d --build
+# App:    http://localhost:3000
+
+services:
+  postgres:
+    image: postgres:16-alpine
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER:-survey}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-survey}
+      POSTGRES_DB: ${POSTGRES_DB:-kraftstoff_survey}
+    volumes:
+      - postgres-data:/var/lib/postgresql/data
+    healthcheck:
+      test:
+        [
+          "CMD-SHELL",
+          "pg_isready -U ${POSTGRES_USER:-survey} -d ${POSTGRES_DB:-kraftstoff_survey}",
+        ]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+      start_period: 5s
+
+  app:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    image: kraftstoff-survey:latest
+    restart: unless-stopped
+    depends_on:
+      postgres:
+        condition: service_healthy
+    ports:
+      - "${PORT:-3000}:3000"
+    environment:
+      DATABASE_URL: postgresql://${POSTGRES_USER:-survey}:${POSTGRES_PASSWORD:-survey}@postgres:5432/${POSTGRES_DB:-kraftstoff_survey}
+      JWT_SECRET: ${JWT_SECRET:-change-me-in-production-use-a-long-random-string}
+      NEXT_PUBLIC_APP_URL: ${NEXT_PUBLIC_APP_URL:-http://localhost:3000}
+
+volumes:
+  postgres-data:

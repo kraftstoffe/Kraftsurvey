@@ -34,7 +34,7 @@ Propagation usually takes 5–30 minutes.
 1. **New Resource** → **Docker Compose**
 2. **Repository:** `kraftstoffe/Kraftsurvey`
 3. **Branch:** `master`
-4. **Compose file:** `docker-compose.yaml` (or leave empty — Coolify default)
+4. **Compose file:** `docker-compose.yml`
 5. **Server:** same server as Coach / Kraftstoff
 6. **Domain** for the `app` service:
    ```
@@ -81,13 +81,13 @@ Expected health response:
 Use the bundled Postgres stack:
 
 ```bash
-docker compose up -d --build
+docker compose -f docker-compose.dev.yml up -d --build
 ```
 
 Or only Postgres for local Node dev:
 
 ```bash
-docker compose up -d postgres
+docker compose -f docker-compose.dev.yml up -d postgres
 cp .env.example .env
 npm run db:push
 npm run dev
