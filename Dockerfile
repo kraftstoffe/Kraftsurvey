@@ -38,12 +38,16 @@ RUN addgroup --system --gid 1001 nodejs \
 COPY --from=builder /app/public ./public
 COPY --from=builder /app/prisma ./prisma
 COPY --from=builder /app/package.json ./package.json
-COPY --from=builder /app/node_modules/.prisma ./node_modules/.prisma
-COPY --from=builder /app/node_modules/@prisma ./node_modules/@prisma
-COPY --from=builder /app/node_modules/prisma ./node_modules/prisma
+COPY --from=builder /app/package-lock.json ./package-lock.json
 COPY --from=builder --chown=nextjs:nodejs /app/.next/standalone ./
 COPY --from=builder --chown=nextjs:nodejs /app/.next/static ./.next/static
 COPY scripts/docker-entrypoint.sh ./docker-entrypoint.sh
+
+# Full Prisma CLI install (includes effect and other runtime deps for db push)
+RUN npm install prisma@6.9.0 --omit=dev --ignore-scripts \
+  && npx prisma generate \
+  && npm cache clean --force \
+  && chown -R nextjs:nodejs /app/node_modules /app/prisma
 
 RUN chmod +x ./docker-entrypoint.sh
 
