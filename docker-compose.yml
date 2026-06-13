@@ -17,14 +17,14 @@ services:
         JWT_SECRET: ${JWT_SECRET:-build-stub-jwt-secret-for-docker-build-only}
         NEXT_PUBLIC_APP_URL: ${NEXT_PUBLIC_APP_URL:-https://survey.kraftstoff.app}
     image: kraftstoff-survey:latest
-    container_name: kraftstoff-survey
-    ports:
-      - "3000:3000"
+    expose:
+      - "3000"
     environment:
       NODE_ENV: production
       DATABASE_URL: ${DATABASE_URL}
       JWT_SECRET: ${JWT_SECRET}
       NEXT_PUBLIC_APP_URL: ${NEXT_PUBLIC_APP_URL:-https://survey.kraftstoff.app}
+      # Coolify UI: "Domains for app" → https://survey.kraftstoff.app:3000
       SERVICE_FQDN_APP_3000: ${SERVICE_FQDN_APP_3000:-}
     healthcheck:
       test:
