@@ -45,7 +45,8 @@ services:
       - "3000"
     environment:
       NODE_ENV: production
-      DATABASE_URL: postgresql://survey:${POSTGRES_PASSWORD}@postgres:5432/kraftstoff_survey?schema=public
+      # Use SURVEY_DATABASE_URL — Coolify must NOT inject DATABASE_URL (stale build stub overrides compose)
+      SURVEY_DATABASE_URL: postgresql://survey:${POSTGRES_PASSWORD}@postgres:5432/kraftstoff_survey?schema=public
       JWT_SECRET: ${JWT_SECRET:?Set JWT_SECRET in Coolify Environment}
       NEXT_PUBLIC_APP_URL: ${NEXT_PUBLIC_APP_URL:-https://survey.kraftstoff.app}
       SERVICE_FQDN_APP_3000: ${SERVICE_FQDN_APP_3000:-https://survey.kraftstoff.app}

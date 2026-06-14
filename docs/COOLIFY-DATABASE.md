@@ -10,13 +10,14 @@ Coolify injected the **wrong** `DATABASE_URL`. The app includes its own Postgres
 
 ## Fix (5 minutes)
 
-### 1. Delete DATABASE_URL in Coolify
+### 1. Delete these variables in Coolify (if present)
 
-Survey app → **Environment** → find `DATABASE_URL` → **Delete** (red button).
+Survey app → **Environment** → **Delete**:
 
-If the value is `postgresql://build:build@127.0.0.1:5432/build` or similar, that is wrong and must be removed.
+- `DATABASE_URL` ← most important, Coolify overrides compose with this
+- Any duplicate/old secrets with `build-stub` in the value
 
-### 2. Set these variables instead (Runtime)
+### 2. Set these variables (Runtime)
 
 | Variable | Example | Buildtime |
 |----------|---------|-----------|
