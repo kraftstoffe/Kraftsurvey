@@ -47,19 +47,51 @@ Propagation usually takes 5–30 minutes.
 
 Copy from [`env.coolify.example`](../env.coolify.example):
 
-| Variable | Value |
-|----------|-------|
-| `DATABASE_URL` | Internal Coolify Postgres URL |
-| `JWT_SECRET` | `openssl rand -hex 32` |
-| `NEXT_PUBLIC_APP_URL` | `https://survey.kraftstoff.app` |
+| Variable | Value | Buildtime | Runtime |
+|----------|-------|-----------|---------|
+| `DATABASE_URL` | Internal Coolify Postgres URL (see Database resource) | **Off** | **On** |
+| `JWT_SECRET` | `openssl rand -hex 32` | Off | **On** |
+| `NEXT_PUBLIC_APP_URL` | `https://survey.kraftstoff.app` | **On** | On |
 
-In Coolify, enable **Available at Buildtime** for `NEXT_PUBLIC_APP_URL` (share links depend on it).
+**Important:** `DATABASE_URL` must use the Coolify Postgres **internal hostname** (e.g. `postgresql://...@abc123-postgres:5432/kraftstoff_survey`). Never use `127.0.0.1` or the Docker build stub — registration and login will fail.
 
 ---
 
 ## 5. Deploy
 
 Click **Deploy** in Coolify. On first start the container runs `prisma db push` automatically.
+
+### Deploy script (optional)
+
+For redeploys from your machine via Coolify API:
+
+```powershell
+# 1. Copy and edit API credentials
+Copy-Item scripts/coolify.env.example scripts/.coolify.env
+
+# 2. Deploy (push git + trigger Coolify + wait for health)
+npm run deploy:coolify -- -Push
+
+# Force rebuild without cache
+npm run deploy:coolify -- -Push -Force
+```
+
+On Linux/macOS:
+
+```bash
+chmod +x scripts/deploy-coolify.sh
+cp scripts/coolify.env.example scripts/.coolify.env
+# edit scripts/.coolify.env
+./scripts/deploy-coolify.sh --push
+```
+
+Required in `scripts/.coolify.env`:
+
+| Variable | Where to find it |
+|----------|------------------|
+| `COOLIFY_URL` | Your Coolify panel URL (e.g. `https://coolify.kraftstoff.app`) |
+| `COOLIFY_TOKEN` | Coolify → Keys & Tokens → API Tokens |
+| `COOLIFY_RESOURCE_UUID` | Survey resource in Coolify (URL or General settings) |
 
 Verify:
 
@@ -71,7 +103,7 @@ curl -s https://survey.kraftstoff.app/api/health
 Expected health response:
 
 ```json
-{"ok":true,"service":"kraftstoff-survey","timestamp":"..."}
+{"ok":true,"service":"kraftstoff-survey","db":true,"timestamp":"..."}
 ```
 
 ---

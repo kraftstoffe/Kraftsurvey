@@ -14,8 +14,9 @@ services:
       context: .
       dockerfile: Dockerfile
       args:
-        DATABASE_URL: ${DATABASE_URL:-postgresql://build:build@127.0.0.1:5432/build}
-        JWT_SECRET: ${JWT_SECRET:-build-stub-jwt-secret-for-docker-build-only}
+        # Build-only stubs — never use runtime DATABASE_URL/JWT_SECRET for docker build
+        DATABASE_URL: postgresql://build:build@127.0.0.1:5432/build
+        JWT_SECRET: build-stub-jwt-secret-for-docker-build-only
         NEXT_PUBLIC_APP_URL: ${NEXT_PUBLIC_APP_URL:-https://survey.kraftstoff.app}
     image: kraftstoff-survey:latest
     expose:
