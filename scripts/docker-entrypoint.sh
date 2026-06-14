@@ -10,7 +10,7 @@ echo "Applying database schema..."
 attempt=0
 max_attempts=30
 
-until npx prisma db push; do
+until node ./node_modules/prisma/build/index.js db push; do
   attempt=$((attempt + 1))
   if [ "$attempt" -ge "$max_attempts" ]; then
     echo "Database not ready after ${max_attempts} attempts."
