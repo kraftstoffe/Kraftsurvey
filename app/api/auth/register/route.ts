@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { createSession, hashPassword } from "@/lib/auth";
+import { prismaErrorMessage } from "@/lib/prisma-errors";
 import { registerSchema } from "@/lib/validations";
 
 export async function POST(request: Request) {
@@ -35,7 +36,12 @@ export async function POST(request: Request) {
     return NextResponse.json({
       user: { id: user.id, email: user.email, name: user.name },
     });
-  } catch {
-    return NextResponse.json({ error: "Registrierung fehlgeschlagen" }, { status: 500 });
+  } catch (error) {
+    console.error("[register]", error);
+    const message = prismaErrorMessage(error);
+    return NextResponse.json(
+      { error: message ?? "Registrierung fehlgeschlagen" },
+      { status: 500 }
+    );
   }
 }
