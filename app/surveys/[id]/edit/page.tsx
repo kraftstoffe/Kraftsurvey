@@ -333,8 +333,30 @@ function QuestionEditor({
 }) {
   const type = question.type as QuestionType;
   const answerMode = getAnswerMode(type);
-  const options = parseOptions(question.options);
   const textVariant = type === QUESTION_TYPES.LONG_TEXT ? "long" : "short";
+
+  const [localText, setLocalText] = useState(question.text);
+  const [localOptions, setLocalOptions] = useState<QuestionOption[]>(() =>
+    parseOptions(question.options)
+  );
+
+  useEffect(() => {
+    setLocalText(question.text);
+    setLocalOptions(parseOptions(question.options));
+  }, [question.id]);
+
+  function saveText() {
+    if (localText !== question.text) {
+      onUpdate({ text: localText });
+    }
+  }
+
+  function saveOptions() {
+    const serialized = JSON.stringify(localOptions);
+    if (serialized !== question.options) {
+      onOptionsChange(localOptions);
+    }
+  }
 
   function setAnswerMode(mode: "text" | "choice") {
     if (mode === "text") {
@@ -343,13 +365,36 @@ function QuestionEditor({
         options: null,
       });
     } else {
+      const opts = localOptions.length >= 2 ? localOptions : defaultLetterOptions();
+      setLocalOptions(opts);
       onUpdate({
         type: QUESTION_TYPES.SINGLE_CHOICE,
-        options: JSON.stringify(
-          options.length >= 2 ? options : defaultLetterOptions()
-        ),
+        options: JSON.stringify(opts),
       });
     }
+  }
+
+  function setLocalOptionLabel(index: number, label: string) {
+    setLocalOptions((prev) => {
+      const next = [...prev];
+      next[index] = { ...next[index], label };
+      return next;
+    });
+  }
+
+  function removeLocalOption(id: string) {
+    const next = localOptions.filter((o) => o.id !== id);
+    setLocalOptions(next);
+    onOptionsChange(next);
+  }
+
+  function addLocalOption() {
+    const next = [
+      ...localOptions,
+      { id: crypto.randomUUID(), label: optionLetter(localOptions.length) },
+    ];
+    setLocalOptions(next);
+    onOptionsChange(next);
   }
 
   return (
@@ -416,25 +461,22 @@ function QuestionEditor({
           <div>
             <p className="mono-label mb-2">Antwortoptionen</p>
             <div className="space-y-2">
-              {options.map((opt, i) => (
+              {localOptions.map((opt, i) => (
                 <div key={opt.id} className="flex gap-2 items-center">
                   <span className="option-letter">{optionLetter(i)}</span>
                   <input
                     className="input flex-1"
                     value={opt.label}
                     placeholder={`Antwort ${optionLetter(i)}`}
-                    onChange={(e) => {
-                      const next = [...options];
-                      next[i] = { ...opt, label: e.target.value };
-                      onOptionsChange(next);
-                    }}
+                    onChange={(e) => setLocalOptionLabel(i, e.target.value)}
+                    onBlur={saveOptions}
                   />
                   <button
                     type="button"
                     className="btn-ghost"
-                    onClick={() => onOptionsChange(options.filter((o) => o.id !== opt.id))}
-                    disabled={options.length <= 2}
-                    title={options.length <= 2 ? "Mindestens 2 Optionen" : "Entfernen"}
+                    onClick={() => removeLocalOption(opt.id)}
+                    disabled={localOptions.length <= 2}
+                    title={localOptions.length <= 2 ? "Mindestens 2 Optionen" : "Entfernen"}
                   >
                     <Trash2 size={16} />
                   </button>
@@ -444,16 +486,11 @@ function QuestionEditor({
             <button
               type="button"
               className="btn-ghost text-sm mt-2"
-              onClick={() =>
-                onOptionsChange([
-                  ...options,
-                  { id: crypto.randomUUID(), label: optionLetter(options.length) },
-                ])
-              }
-              disabled={options.length >= 26}
+              onClick={addLocalOption}
+              disabled={localOptions.length >= 26}
             >
               <Plus size={14} />
-              Option {optionLetter(options.length)} hinzufügen
+              Option {optionLetter(localOptions.length)} hinzufügen
             </button>
             <label className="flex items-center gap-2 text-sm text-[var(--text-muted)] mt-3">
               <input
@@ -476,8 +513,9 @@ function QuestionEditor({
           <label className="mono-label block mb-2">Frage</label>
           <input
             className="input"
-            value={question.text}
-            onChange={(e) => onUpdate({ text: e.target.value })}
+            value={localText}
+            onChange={(e) => setLocalText(e.target.value)}
+            onBlur={saveText}
             placeholder="Fragetext eingeben…"
           />
         </div>
