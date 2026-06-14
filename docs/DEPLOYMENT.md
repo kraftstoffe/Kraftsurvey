@@ -20,42 +20,35 @@ Propagation usually takes 5–30 minutes.
 
 ---
 
-## 2. Coolify — Postgres database
+## 2. Coolify — Application (Postgres included)
 
-1. Coolify → **New Resource** → **Database** → **PostgreSQL**
-2. Name: e.g. `kraftstoff-survey-db`
-3. After creation, copy the **internal Postgres URL**
-4. Create database `kraftstoff_survey` if Coolify does not auto-create it
-
----
-
-## 3. Coolify — Application
+The compose stack includes **Postgres + App** — no separate Coolify database resource required.
 
 1. **New Resource** → **Docker Compose**
 2. **Repository:** `kraftstoffe/Kraftsurvey`
 3. **Branch:** `master`
-4. **Compose file:** `docker-compose.yml` or leave Coolify default `docker-compose.yaml` (includes `.yml`)
+4. **Compose file:** `docker-compose.yml`
 5. **Server:** same server as Coach / Kraftstoff
 6. **Domain** for the `app` service:
    ```
    https://survey.kraftstoff.app:3000
    ```
 
+See also: [`docs/COOLIFY-DATABASE.md`](COOLIFY-DATABASE.md) if the container restart-loops on `DATABASE_URL` stub.
+
 ---
 
-## 4. Environment variables
+## 3. Environment variables
 
 Copy from [`env.coolify.example`](../env.coolify.example):
 
 | Variable | Value | Buildtime | Runtime |
 |----------|-------|-----------|---------|
-| `DATABASE_URL` | Internal Coolify Postgres URL (see Database resource) | **Off** | **On** |
+| `POSTGRES_PASSWORD` | `openssl rand -hex 16` | Off | **On** |
 | `JWT_SECRET` | `openssl rand -hex 32` | Off | **On** |
 | `NEXT_PUBLIC_APP_URL` | `https://survey.kraftstoff.app` | **On** | On |
 
-**Important:** `DATABASE_URL` must use the Coolify Postgres **internal hostname** (e.g. `postgresql://...@abc123-postgres:5432/kraftstoff_survey`). Never use `127.0.0.1` or the Docker build stub — registration and login will fail.
-
----
+**Do not set `DATABASE_URL`** in Coolify — delete it if present (see [`COOLIFY-DATABASE.md`](COOLIFY-DATABASE.md)).
 
 ## 5. Deploy
 

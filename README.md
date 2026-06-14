@@ -20,7 +20,8 @@ Quick checklist:
 2. Coolify: new Docker Compose app from `kraftstoffe/Kraftsurvey`
 3. Compose file: `docker-compose.yml`
 4. Domain: `https://survey.kraftstoff.app:3000`
-5. Env: see `env.coolify.example`
+5. Env: `POSTGRES_PASSWORD`, `JWT_SECRET`, `NEXT_PUBLIC_APP_URL` — **not** `DATABASE_URL` ([details](docs/COOLIFY-DATABASE.md))
+6. Redeploy script: `npm run deploy:coolify` (see [`docs/DEPLOYMENT.md`](docs/DEPLOYMENT.md))
 
 ## Setup (local)
 

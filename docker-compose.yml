@@ -1,32 +1,53 @@
 # Kraftstoff Survey — Coolify production (survey.kraftstoff.app)
 #
-# Canonical compose file (edit this).
-# Coolify may load docker-compose.yaml which includes this file.
-# Domain (app service): https://survey.kraftstoff.app:3000
-# (Coolify UI — must include :3000; compose also sets SERVICE_FQDN_APP_3000)
+# Compose file: docker-compose.yml
+# Domain (service app): https://survey.kraftstoff.app:3000
 #
-# Required environment:
-#   DATABASE_URL, JWT_SECRET, NEXT_PUBLIC_APP_URL
+# Coolify Environment (Runtime) — set ONLY these:
+#   POSTGRES_PASSWORD  (openssl rand -hex 16)
+#   JWT_SECRET         (openssl rand -hex 32)
+#   NEXT_PUBLIC_APP_URL = https://survey.kraftstoff.app  (+ Buildtime)
+#
+# Do NOT set DATABASE_URL in Coolify — it is wired automatically below.
+# If DATABASE_URL exists in Coolify with the old build stub, DELETE it.
 
 services:
+  postgres:
+    image: postgres:16-alpine
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: survey
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?Set POSTGRES_PASSWORD in Coolify Environment}
+      POSTGRES_DB: kraftstoff_survey
+    volumes:
+      - postgres-data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U survey -d kraftstoff_survey"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+      start_period: 10s
+
   app:
     build:
       context: .
       dockerfile: Dockerfile
       args:
-        # Build-only stubs — never use runtime DATABASE_URL/JWT_SECRET for docker build
         DATABASE_URL: postgresql://build:build@127.0.0.1:5432/build
         JWT_SECRET: build-stub-jwt-secret-for-docker-build-only
         NEXT_PUBLIC_APP_URL: ${NEXT_PUBLIC_APP_URL:-https://survey.kraftstoff.app}
     image: kraftstoff-survey:latest
+    restart: unless-stopped
+    depends_on:
+      postgres:
+        condition: service_healthy
     expose:
       - "3000"
     environment:
       NODE_ENV: production
-      DATABASE_URL: ${DATABASE_URL}
-      JWT_SECRET: ${JWT_SECRET}
+      DATABASE_URL: postgresql://survey:${POSTGRES_PASSWORD}@postgres:5432/kraftstoff_survey?schema=public
+      JWT_SECRET: ${JWT_SECRET:?Set JWT_SECRET in Coolify Environment}
       NEXT_PUBLIC_APP_URL: ${NEXT_PUBLIC_APP_URL:-https://survey.kraftstoff.app}
-      # Coolify Traefik routing — domain must include https:// (port is in the var name)
       SERVICE_FQDN_APP_3000: ${SERVICE_FQDN_APP_3000:-https://survey.kraftstoff.app}
     healthcheck:
       test:
@@ -42,4 +63,6 @@ services:
       timeout: 5s
       retries: 6
       start_period: 90s
-    restart: unless-stopped
+
+volumes:
+  postgres-data:
