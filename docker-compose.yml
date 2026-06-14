@@ -2,7 +2,8 @@
 #
 # Canonical compose file (edit this).
 # Coolify may load docker-compose.yaml which includes this file.
-# Domain (app): https://survey.kraftstoff.app:3000
+# Domain (app service): https://survey.kraftstoff.app:3000
+# (Coolify UI — must include :3000; compose also sets SERVICE_FQDN_APP_3000)
 #
 # Required environment:
 #   DATABASE_URL, JWT_SECRET, NEXT_PUBLIC_APP_URL
@@ -24,8 +25,8 @@ services:
       DATABASE_URL: ${DATABASE_URL}
       JWT_SECRET: ${JWT_SECRET}
       NEXT_PUBLIC_APP_URL: ${NEXT_PUBLIC_APP_URL:-https://survey.kraftstoff.app}
-      # Coolify UI: "Domains for app" → https://survey.kraftstoff.app:3000
-      SERVICE_FQDN_APP_3000: ${SERVICE_FQDN_APP_3000:-}
+      # Coolify Traefik routing — domain must include https:// (port is in the var name)
+      SERVICE_FQDN_APP_3000: ${SERVICE_FQDN_APP_3000:-https://survey.kraftstoff.app}
     healthcheck:
       test:
         [
@@ -36,8 +37,8 @@ services:
           "--spider",
           "http://127.0.0.1:3000/api/health",
         ]
-      interval: 30s
-      timeout: 10s
-      retries: 5
-      start_period: 60s
+      interval: 15s
+      timeout: 5s
+      retries: 6
+      start_period: 30s
     restart: unless-stopped
