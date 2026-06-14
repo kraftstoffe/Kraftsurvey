@@ -4,19 +4,17 @@ WORKDIR /app
 
 COPY package.json package-lock.json ./
 COPY prisma ./prisma
+# Build-time only (not an ARG — avoids Coolify env UI binding). Not used at runtime.
+ENV DATABASE_URL=postgresql://build:build@127.0.0.1:5432/build
 RUN npm ci
 
 COPY . .
 
-ARG DATABASE_URL=postgresql://build:build@127.0.0.1:5432/build
-ARG JWT_SECRET=build-stub-jwt-secret
 ARG NEXT_PUBLIC_APP_URL=https://survey.kraftstoff.app
 ARG COOLIFY_FQDN=
 ARG COOLIFY_BUILD_SECRETS_HASH=
 
 ENV NEXT_TELEMETRY_DISABLED=1
-ENV DATABASE_URL=$DATABASE_URL
-ENV JWT_SECRET=$JWT_SECRET
 ENV NEXT_PUBLIC_APP_URL=$NEXT_PUBLIC_APP_URL
 ENV NODE_OPTIONS=--max-old-space-size=1536
 ENV CI=1

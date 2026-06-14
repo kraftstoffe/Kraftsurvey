@@ -10,12 +10,16 @@ Coolify injected the **wrong** `DATABASE_URL`. The app includes its own Postgres
 
 ## Fix (5 minutes)
 
-### 1. Delete these variables in Coolify (if present)
+### 1. Remove stale variables in Coolify
 
-Survey app → **Environment** → **Delete**:
+After redeploying commit with `DATABASE_URL` removed from compose/Dockerfile:
 
-- `DATABASE_URL` ← most important, Coolify overrides compose with this
-- Any duplicate/old secrets with `build-stub` in the value
+Survey app → **Environment** → **Delete** (if present):
+
+- `DATABASE_URL`
+- `JWT_SECRET` if value still contains `build-stub`
+
+Coolify only allows deleting variables that are no longer referenced in `docker-compose.yml` / `Dockerfile`.
 
 ### 2. Set these variables (Runtime)
 
