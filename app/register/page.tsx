@@ -10,6 +10,7 @@ export default function RegisterPage() {
   const [name, setName] = useState("");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
+  const [inviteCode, setInviteCode] = useState("");
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
 
@@ -21,7 +22,12 @@ export default function RegisterPage() {
     const res = await fetch("/api/auth/register", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ name: name || undefined, email, password }),
+      body: JSON.stringify({
+        name: name || undefined,
+        email,
+        password,
+        inviteCode: inviteCode || undefined,
+      }),
     });
 
     const data = await res.json();
@@ -74,6 +80,19 @@ export default function RegisterPage() {
               value={email}
               onChange={(e) => setEmail(e.target.value)}
               required
+            />
+          </div>
+          <div>
+            <label htmlFor="inviteCode" className="mono-label block mb-2">
+              Einladungscode (falls erforderlich)
+            </label>
+            <input
+              id="inviteCode"
+              type="text"
+              className="input"
+              value={inviteCode}
+              onChange={(e) => setInviteCode(e.target.value)}
+              autoComplete="off"
             />
           </div>
           <div>

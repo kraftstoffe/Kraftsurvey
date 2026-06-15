@@ -8,7 +8,10 @@
     "build:docker": "next build --webpack",
     "start": "next start",
     "lint": "eslint",
+    "test": "vitest run",
     "db:push": "prisma db push",
+    "db:migrate": "prisma migrate dev",
+    "db:migrate:deploy": "prisma migrate deploy",
     "db:studio": "prisma studio",
     "docker:up": "docker compose -f docker-compose.dev.yml up -d --build",
     "docker:down": "docker compose -f docker-compose.dev.yml down",
@@ -39,6 +42,7 @@
     "eslint": "^9",
     "eslint-config-next": "^16.2.6",
     "tailwindcss": "^4",
-    "typescript": "^5"
+    "typescript": "^5",
+    "vitest": "^3.2.4"
   }
 }

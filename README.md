@@ -48,6 +48,14 @@ Siehe `.env.example`:
 - `JWT_SECRET` — Geheimer Schlüssel für Sessions
 - `NEXT_PUBLIC_APP_URL` — Basis-URL für Share-Links
 - `PORT` — Host-Port für Docker Compose (Standard: 3000)
+- `REGISTRATION_ENABLED` — Registrierung deaktivieren (`false`)
+- `REGISTRATION_INVITE_CODE` — Optionaler Einladungscode für Registrierung
+
+## Datenbank-Migrationen
+
+Production verwendet `prisma migrate deploy` (siehe `scripts/docker-entrypoint.sh`).
+
+Bestehende Installationen mit `db push` vor dem Audit: einmalig `scripts/upgrade-db-push.sql` ausführen, dann `npx prisma migrate resolve --applied 20250615120000_init`.
 
 ## Stack
 

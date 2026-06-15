@@ -1,14 +1,19 @@
 import { NextResponse } from "next/server";
 import { requireSession } from "@/lib/auth";
+import { handleRouteError } from "@/lib/api-error";
 import { prisma } from "@/lib/prisma";
 import {
   isScaleType,
+  isTextType,
   parseOptions,
   QUESTION_TYPES,
   type QuestionType,
 } from "@/lib/survey-types";
 
 type RouteContext = { params: Promise<{ id: string }> };
+
+const MAX_EXPORT_ROWS = 10_000;
+const MAX_TEXT_ANSWERS = 500;
 
 export async function GET(_request: Request, context: RouteContext) {
   try {
@@ -19,10 +24,6 @@ export async function GET(_request: Request, context: RouteContext) {
       where: { id, ownerId: userId },
       include: {
         questions: { orderBy: { order: "asc" } },
-        responses: {
-          include: { answers: true },
-          orderBy: { createdAt: "desc" },
-        },
       },
     });
 
@@ -30,19 +31,92 @@ export async function GET(_request: Request, context: RouteContext) {
       return NextResponse.json({ error: "Umfrage nicht gefunden" }, { status: 404 });
     }
 
-    const totalResponses = survey.responses.length;
-    const durations = survey.responses
-      .map((r) => r.durationMs)
-      .filter((d): d is number => d != null);
+    const totalResponses = await prisma.response.count({
+      where: { surveyId: survey.id },
+    });
+
+    const durationAgg = await prisma.response.aggregate({
+      where: { surveyId: survey.id, durationMs: { not: null } },
+      _avg: { durationMs: true },
+    });
     const avgDurationMs =
-      durations.length > 0
-        ? Math.round(durations.reduce((a, b) => a + b, 0) / durations.length)
+      durationAgg._avg.durationMs != null
+        ? Math.round(durationAgg._avg.durationMs)
         : null;
+
+    const requiredCount = survey.questions.filter((q) => q.required).length;
+
+    let completeResponses = totalResponses;
+    if (requiredCount > 0 && totalResponses > 0) {
+      const completeRows = await prisma.$queryRaw<{ count: bigint }[]>`
+        SELECT COUNT(*) AS count
+        FROM "Response" r
+        WHERE r."surveyId" = ${survey.id}
+          AND (
+            SELECT COUNT(DISTINCT a."questionId")
+            FROM "Answer" a
+            INNER JOIN "Question" q ON q.id = a."questionId"
+            WHERE a."responseId" = r.id
+              AND q."required" = true
+              AND TRIM(a.value) <> ''
+          ) = ${requiredCount}
+      `;
+      completeResponses = Number(completeRows[0]?.count ?? 0);
+    }
+
+    const completionRate =
+      totalResponses > 0
+        ? Math.round((completeResponses / totalResponses) * 100)
+        : 0;
+
+    const answerGroups = await prisma.answer.groupBy({
+      by: ["questionId", "value"],
+      where: {
+        question: { surveyId: survey.id },
+        NOT: { value: "" },
+      },
+      _count: { value: true },
+    });
+
+    const answersByQuestion = new Map<string, Map<string, number>>();
+    for (const row of answerGroups) {
+      if (!answersByQuestion.has(row.questionId)) {
+        answersByQuestion.set(row.questionId, new Map());
+      }
+      answersByQuestion.get(row.questionId)!.set(row.value, row._count.value);
+    }
+
+    const textQuestionIds = survey.questions
+      .filter((q) => isTextType(q.type as QuestionType))
+      .map((q) => q.id);
+
+    const textAnswerRows =
+      textQuestionIds.length > 0
+        ? await prisma.answer.findMany({
+            where: {
+              questionId: { in: textQuestionIds },
+              NOT: { value: "" },
+            },
+            select: { questionId: true, value: true },
+            orderBy: { response: { createdAt: "desc" } },
+            take: MAX_TEXT_ANSWERS * textQuestionIds.length,
+          })
+        : [];
+
+    const textAnswersByQuestion = new Map<string, string[]>();
+    for (const row of textAnswerRows) {
+      const list = textAnswersByQuestion.get(row.questionId) ?? [];
+      if (list.length < MAX_TEXT_ANSWERS) {
+        list.push(row.value);
+        textAnswersByQuestion.set(row.questionId, list);
+      }
+    }
 
     const questionStats = survey.questions.map((question) => {
       const type = question.type as QuestionType;
-      const allAnswers = survey.responses.flatMap((r) =>
-        r.answers.filter((a) => a.questionId === question.id)
+      const counts = answersByQuestion.get(question.id) ?? new Map<string, number>();
+      const allAnswers = Array.from(counts.entries()).flatMap(([value, count]) =>
+        Array.from({ length: count }, () => value)
       );
 
       if (
@@ -52,28 +126,28 @@ export async function GET(_request: Request, context: RouteContext) {
         type === QUESTION_TYPES.YES_NO
       ) {
         const options = parseOptions(question.options);
-        const counts: Record<string, number> = {};
+        const distribution: Record<string, number> = {};
 
         for (const opt of options) {
-          counts[opt.label] = 0;
+          distribution[opt.label] = 0;
         }
         if (type === QUESTION_TYPES.YES_NO) {
-          counts["Ja"] = 0;
-          counts["Nein"] = 0;
+          distribution["Ja"] = 0;
+          distribution["Nein"] = 0;
         }
 
-        for (const answer of allAnswers) {
+        for (const [value, count] of counts) {
           if (type === QUESTION_TYPES.MULTIPLE_CHOICE) {
             try {
-              const values = JSON.parse(answer.value) as string[];
+              const values = JSON.parse(value) as string[];
               for (const v of values) {
-                counts[v] = (counts[v] ?? 0) + 1;
+                distribution[v] = (distribution[v] ?? 0) + count;
               }
             } catch {
-              counts[answer.value] = (counts[answer.value] ?? 0) + 1;
+              distribution[value] = (distribution[value] ?? 0) + count;
             }
           } else {
-            counts[answer.value] = (counts[answer.value] ?? 0) + 1;
+            distribution[value] = (distribution[value] ?? 0) + count;
           }
         }
 
@@ -81,7 +155,7 @@ export async function GET(_request: Request, context: RouteContext) {
           questionId: question.id,
           text: question.text,
           type,
-          distribution: Object.entries(counts).map(([label, count]) => ({
+          distribution: Object.entries(distribution).map(([label, count]) => ({
             label,
             count,
             percentage: totalResponses > 0 ? Math.round((count / totalResponses) * 100) : 0,
@@ -91,7 +165,7 @@ export async function GET(_request: Request, context: RouteContext) {
 
       if (isScaleType(type)) {
         const values = allAnswers
-          .map((a) => parseInt(a.value, 10))
+          .map((a) => parseInt(a, 10))
           .filter((v) => !isNaN(v));
         const avg =
           values.length > 0
@@ -119,11 +193,18 @@ export async function GET(_request: Request, context: RouteContext) {
         questionId: question.id,
         text: question.text,
         type,
-        textAnswers: allAnswers.map((a) => a.value),
+        textAnswers: textAnswersByQuestion.get(question.id) ?? [],
       };
     });
 
-    const rows = survey.responses.map((response) => {
+    const responses = await prisma.response.findMany({
+      where: { surveyId: survey.id },
+      include: { answers: { select: { questionId: true, value: true } } },
+      orderBy: { createdAt: "desc" },
+      take: MAX_EXPORT_ROWS,
+    });
+
+    const rows = responses.map((response) => {
       const row: Record<string, string> = {
         id: response.id,
         createdAt: response.createdAt.toISOString(),
@@ -144,7 +225,7 @@ export async function GET(_request: Request, context: RouteContext) {
       stats: {
         totalResponses,
         avgDurationMs,
-        completionRate: totalResponses > 0 ? 100 : 0,
+        completionRate,
         questionStats,
         rows,
         questions: survey.questions.map((q) => ({
@@ -152,9 +233,10 @@ export async function GET(_request: Request, context: RouteContext) {
           text: q.text,
           type: q.type,
         })),
+        rowsTruncated: totalResponses > MAX_EXPORT_ROWS,
       },
     });
-  } catch {
-    return NextResponse.json({ error: "Nicht autorisiert" }, { status: 401 });
+  } catch (error) {
+    return handleRouteError(error, "survey-stats");
   }
 }

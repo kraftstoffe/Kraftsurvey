@@ -8,6 +8,23 @@ datasource db {
   url      = env("DATABASE_URL")
 }
 
+enum SurveyStatus {
+  DRAFT
+  LIVE
+  CLOSED
+}
+
+enum QuestionType {
+  SHORT_TEXT
+  LONG_TEXT
+  SINGLE_CHOICE
+  MULTIPLE_CHOICE
+  SCALE_5
+  SCALE_10
+  YES_NO
+  DROPDOWN
+}
+
 model User {
   id           String   @id @default(cuid())
   email        String   @unique
@@ -19,30 +36,30 @@ model User {
 }
 
 model Survey {
-  id          String     @id @default(cuid())
+  id          String       @id @default(cuid())
   title       String
   description String?
-  slug        String     @unique
-  status      String     @default("DRAFT")
+  slug        String       @unique
+  status      SurveyStatus @default(DRAFT)
   ownerId     String
-  owner       User       @relation(fields: [ownerId], references: [id], onDelete: Cascade)
+  owner       User         @relation(fields: [ownerId], references: [id], onDelete: Cascade)
   questions   Question[]
   responses   Response[]
-  createdAt   DateTime   @default(now())
-  updatedAt   DateTime   @updatedAt
+  createdAt   DateTime     @default(now())
+  updatedAt   DateTime     @updatedAt
 
   @@index([ownerId])
   @@index([slug])
 }
 
 model Question {
-  id       String   @id @default(cuid())
+  id       String       @id @default(cuid())
   surveyId String
-  survey   Survey   @relation(fields: [surveyId], references: [id], onDelete: Cascade)
-  type     String
+  survey   Survey       @relation(fields: [surveyId], references: [id], onDelete: Cascade)
+  type     QuestionType
   text     String
   options  String?
-  required Boolean  @default(false)
+  required Boolean      @default(false)
   order    Int
   answers  Answer[]
 
@@ -53,13 +70,13 @@ model Response {
   id          String   @id @default(cuid())
   surveyId    String
   survey      Survey   @relation(fields: [surveyId], references: [id], onDelete: Cascade)
-  fingerprint String?
+  fingerprint String
   durationMs  Int?
   createdAt   DateTime @default(now())
   answers     Answer[]
 
+  @@unique([surveyId, fingerprint])
   @@index([surveyId])
-  @@index([surveyId, fingerprint])
 }
 
 model Answer {
@@ -70,6 +87,7 @@ model Answer {
   question   Question @relation(fields: [questionId], references: [id], onDelete: Cascade)
   value      String
 
+  @@unique([responseId, questionId])
   @@index([responseId])
   @@index([questionId])
 }

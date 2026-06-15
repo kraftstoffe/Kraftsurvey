@@ -50,6 +50,7 @@ type Stats = {
   questionStats: QuestionStat[];
   rows: Record<string, string>[];
   questions: { id: string; text: string; type: string }[];
+  rowsTruncated?: boolean;
 };
 
 const CHART_COLORS = ["#8b5cf6", "#bf5af2", "#9d4edd", "#a855f7", "#7c3aed", "#6d28d9"];
@@ -154,6 +155,12 @@ export default function ResultsPage() {
       </div>
 
       <FlashMessage message={message} variant={variant} />
+
+      {stats.rowsTruncated && (
+        <p className="mb-4 text-sm text-[var(--text-muted)]">
+          CSV-Export enthält die neuesten 10.000 Antworten.
+        </p>
+      )}
 
       <div className="kpi-grid mb-8">
         <div className="kpi-card">

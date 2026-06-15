@@ -1,7 +1,8 @@
 import { NextResponse } from "next/server";
 import { requireSession } from "@/lib/auth";
+import { handleRouteError } from "@/lib/api-error";
 import { prisma } from "@/lib/prisma";
-import { questionSchema } from "@/lib/validations";
+import { questionSchema, questionReorderSchema } from "@/lib/validations";
 
 type RouteContext = { params: Promise<{ id: string }> };
 
@@ -46,8 +47,8 @@ export async function POST(request: Request, context: RouteContext) {
     });
 
     return NextResponse.json({ question }, { status: 201 });
-  } catch {
-    return NextResponse.json({ error: "Nicht autorisiert" }, { status: 401 });
+  } catch (error) {
+    return handleRouteError(error, "questions-create");
   }
 }
 
@@ -62,23 +63,36 @@ export async function PUT(request: Request, context: RouteContext) {
     }
 
     const body = await request.json();
-    const questions = body.questions as Array<{ id: string; order: number }>;
+    const parsed = questionReorderSchema.safeParse(body);
 
-    if (!Array.isArray(questions)) {
-      return NextResponse.json({ error: "Ungültige Daten" }, { status: 400 });
+    if (!parsed.success) {
+      return NextResponse.json(
+        { error: parsed.error.issues[0]?.message ?? "Ungültige Daten" },
+        { status: 400 }
+      );
+    }
+
+    const questionIds = parsed.data.questions.map((q) => q.id);
+    const owned = await prisma.question.findMany({
+      where: { surveyId, id: { in: questionIds } },
+      select: { id: true },
+    });
+
+    if (owned.length !== questionIds.length) {
+      return NextResponse.json({ error: "Ungültige Frage" }, { status: 400 });
     }
 
     await prisma.$transaction(
-      questions.map((q) =>
+      parsed.data.questions.map((q) =>
         prisma.question.update({
-          where: { id: q.id },
+          where: { id: q.id, surveyId },
           data: { order: q.order },
         })
       )
     );
 
     return NextResponse.json({ ok: true });
-  } catch {
-    return NextResponse.json({ error: "Nicht autorisiert" }, { status: 401 });
+  } catch (error) {
+    return handleRouteError(error, "questions-reorder");
   }
 }

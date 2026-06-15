@@ -1,10 +1,12 @@
 import { NextResponse } from "next/server";
 import type { NextRequest } from "next/server";
 import { jwtVerify } from "jose";
+import { SESSION_COOKIE } from "@/lib/auth";
 
 const PROTECTED_PREFIXES = ["/dashboard", "/surveys"];
+const JWT_ALGORITHM = "HS256";
 
-export async function middleware(request: NextRequest) {
+export async function proxy(request: NextRequest) {
   const { pathname } = request.nextUrl;
 
   const isProtected = PROTECTED_PREFIXES.some(
@@ -15,7 +17,7 @@ export async function middleware(request: NextRequest) {
     return NextResponse.next();
   }
 
-  const token = request.cookies.get("survey_session")?.value;
+  const token = request.cookies.get(SESSION_COOKIE)?.value;
   if (!token) {
     const loginUrl = new URL("/login", request.url);
     loginUrl.searchParams.set("redirect", pathname);
@@ -25,7 +27,12 @@ export async function middleware(request: NextRequest) {
   try {
     const secret = process.env.JWT_SECRET;
     if (!secret) throw new Error("No secret");
-    await jwtVerify(token, new TextEncoder().encode(secret));
+    const { payload } = await jwtVerify(token, new TextEncoder().encode(secret), {
+      algorithms: [JWT_ALGORITHM],
+    });
+    if (payload.type !== "creator" || typeof payload.userId !== "string") {
+      throw new Error("Invalid session");
+    }
     return NextResponse.next();
   } catch {
     const loginUrl = new URL("/login", request.url);

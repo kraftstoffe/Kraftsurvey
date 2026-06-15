@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import { requireSession } from "@/lib/auth";
+import { handleRouteError } from "@/lib/api-error";
 import { prisma } from "@/lib/prisma";
 import { generateSlug } from "@/lib/utils";
 import { surveySchema } from "@/lib/validations";
@@ -13,8 +14,8 @@ export async function GET() {
       orderBy: { updatedAt: "desc" },
     });
     return NextResponse.json({ surveys });
-  } catch {
-    return NextResponse.json({ error: "Nicht autorisiert" }, { status: 401 });
+  } catch (error) {
+    return handleRouteError(error, "surveys-list");
   }
 }
 
@@ -44,7 +45,7 @@ export async function POST(request: Request) {
     });
 
     return NextResponse.json({ survey }, { status: 201 });
-  } catch {
-    return NextResponse.json({ error: "Nicht autorisiert" }, { status: 401 });
+  } catch (error) {
+    return handleRouteError(error, "surveys-create");
   }
 }

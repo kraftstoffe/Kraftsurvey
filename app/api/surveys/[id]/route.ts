@@ -1,9 +1,13 @@
 import { NextResponse } from "next/server";
+import { Prisma, SurveyStatus } from "@prisma/client";
 import { requireSession } from "@/lib/auth";
+import { handleRouteError } from "@/lib/api-error";
 import { prisma } from "@/lib/prisma";
 import { surveySchema } from "@/lib/validations";
 
 type RouteContext = { params: Promise<{ id: string }> };
+
+const VALID_STATUSES = new Set<string>(Object.values(SurveyStatus));
 
 async function getOwnedSurvey(id: string, userId: string) {
   return prisma.survey.findFirst({
@@ -26,8 +30,8 @@ export async function GET(_request: Request, context: RouteContext) {
     }
 
     return NextResponse.json({ survey });
-  } catch {
-    return NextResponse.json({ error: "Nicht autorisiert" }, { status: 401 });
+  } catch (error) {
+    return handleRouteError(error, "survey-get");
   }
 }
 
@@ -43,10 +47,10 @@ export async function PATCH(request: Request, context: RouteContext) {
     }
 
     if (body.status !== undefined) {
-      if (!["DRAFT", "LIVE", "CLOSED"].includes(body.status)) {
+      if (!VALID_STATUSES.has(body.status)) {
         return NextResponse.json({ error: "Ungültiger Status" }, { status: 400 });
       }
-      if (body.status === "LIVE" && survey.questions.length === 0) {
+      if (body.status === SurveyStatus.LIVE && survey.questions.length === 0) {
         return NextResponse.json(
           { error: "Mindestens eine Frage erforderlich" },
           { status: 400 }
@@ -72,7 +76,7 @@ export async function PATCH(request: Request, context: RouteContext) {
       data: {
         ...(body.title !== undefined && { title: body.title }),
         ...(body.description !== undefined && { description: body.description }),
-        ...(body.status !== undefined && { status: body.status }),
+        ...(body.status !== undefined && { status: body.status as SurveyStatus }),
       },
       include: {
         questions: { orderBy: { order: "asc" } },
@@ -81,8 +85,8 @@ export async function PATCH(request: Request, context: RouteContext) {
     });
 
     return NextResponse.json({ survey: updated });
-  } catch {
-    return NextResponse.json({ error: "Nicht autorisiert" }, { status: 401 });
+  } catch (error) {
+    return handleRouteError(error, "survey-patch");
   }
 }
 
@@ -98,7 +102,7 @@ export async function DELETE(_request: Request, context: RouteContext) {
 
     await prisma.survey.delete({ where: { id } });
     return NextResponse.json({ ok: true });
-  } catch {
-    return NextResponse.json({ error: "Nicht autorisiert" }, { status: 401 });
+  } catch (error) {
+    return handleRouteError(error, "survey-delete");
   }
 }

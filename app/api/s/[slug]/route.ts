@@ -1,4 +1,5 @@
 import { NextResponse } from "next/server";
+import { SurveyStatus } from "@prisma/client";
 import { prisma } from "@/lib/prisma";
 
 type RouteContext = { params: Promise<{ slug: string }> };
@@ -13,10 +14,10 @@ export async function GET(_request: Request, context: RouteContext) {
     },
   });
 
-  if (!survey || survey.status !== "LIVE") {
+  if (!survey || survey.status !== SurveyStatus.LIVE) {
     return NextResponse.json(
-      { error: survey?.status === "CLOSED" ? "Umfrage geschlossen" : "Umfrage nicht gefunden" },
-      { status: survey?.status === "CLOSED" ? 410 : 404 }
+      { error: survey?.status === SurveyStatus.CLOSED ? "Umfrage geschlossen" : "Umfrage nicht gefunden" },
+      { status: survey?.status === SurveyStatus.CLOSED ? 410 : 404 }
     );
   }
 

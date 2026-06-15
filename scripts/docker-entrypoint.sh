@@ -34,11 +34,11 @@ if [ -z "$JWT_SECRET" ]; then
   exit 1
 fi
 
-echo "Applying database schema..."
+echo "Applying database migrations..."
 attempt=0
 max_attempts=30
 
-until node ./node_modules/prisma/build/index.js db push; do
+until node ./node_modules/prisma/build/index.js migrate deploy; do
   attempt=$((attempt + 1))
   if [ "$attempt" -ge "$max_attempts" ]; then
     echo "Database not ready after ${max_attempts} attempts."
@@ -49,6 +49,6 @@ until node ./node_modules/prisma/build/index.js db push; do
   sleep 2
 done
 
-echo "Database schema applied."
+echo "Database migrations applied."
 echo "Starting Kraftstoff Survey..."
 exec node server.js

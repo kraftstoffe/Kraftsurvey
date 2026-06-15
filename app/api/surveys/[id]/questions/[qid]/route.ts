@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import { requireSession } from "@/lib/auth";
+import { handleRouteError } from "@/lib/api-error";
 import { prisma } from "@/lib/prisma";
 import { questionSchema } from "@/lib/validations";
 
@@ -40,8 +41,8 @@ export async function PATCH(request: Request, context: RouteContext) {
     });
 
     return NextResponse.json({ question });
-  } catch {
-    return NextResponse.json({ error: "Nicht autorisiert" }, { status: 401 });
+  } catch (error) {
+    return handleRouteError(error, "question-patch");
   }
 }
 
@@ -66,7 +67,7 @@ export async function DELETE(_request: Request, context: RouteContext) {
 
     await prisma.question.delete({ where: { id: qid } });
     return NextResponse.json({ ok: true });
-  } catch {
-    return NextResponse.json({ error: "Nicht autorisiert" }, { status: 401 });
+  } catch (error) {
+    return handleRouteError(error, "question-delete");
   }
 }

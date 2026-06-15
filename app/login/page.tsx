@@ -4,11 +4,12 @@ import Link from "next/link";
 import { useSearchParams } from "next/navigation";
 import { Suspense } from "react";
 import { CreatorLoginForm } from "@/components/creator-login-form";
+import { safeRedirect } from "@/lib/safe-redirect";
 import { ThemeToggle } from "@/components/theme-toggle";
 
 function LoginForm() {
   const searchParams = useSearchParams();
-  const redirect = searchParams.get("redirect") ?? "/dashboard";
+  const redirect = safeRedirect(searchParams.get("redirect"));
 
   return (
     <div className="min-h-dvh kraftstoff-bg kraftgeon-grid flex items-center justify-center p-6">

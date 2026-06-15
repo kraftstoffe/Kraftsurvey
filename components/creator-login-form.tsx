@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { FormEvent, useState } from "react";
+import { safeRedirect } from "@/lib/safe-redirect";
 
 type CreatorLoginFormProps = {
   redirect?: string;
@@ -38,7 +39,7 @@ export function CreatorLoginForm({
       return;
     }
 
-    router.push(redirect);
+    router.push(safeRedirect(redirect));
     router.refresh();
   }
 
