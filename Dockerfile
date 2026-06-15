@@ -10,7 +10,7 @@ RUN npm ci
 
 COPY . .
 
-ARG NEXT_PUBLIC_APP_URL=https://survey.kraftstoff.app
+ARG NEXT_PUBLIC_APP_URL=https://kraftsurvey.org
 ARG COOLIFY_FQDN=
 ARG COOLIFY_BUILD_SECRETS_HASH=
 

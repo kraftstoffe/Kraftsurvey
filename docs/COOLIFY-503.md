@@ -9,10 +9,10 @@ Traefik returns this when **no healthy container** is registered for the domain.
 Open your Survey resource → **Service `app`** → **Domains**:
 
 ```
-https://survey.kraftstoff.app:3000
+https://kraftsurvey.org:3000
 ```
 
-Port **3000 must be in the domain field** — not only `https://survey.kraftstoff.app`.
+Port **3000 must be in the domain field** — not only `https://kraftsurvey.org`.
 
 Then **Save** → **Redeploy**.
 
@@ -24,7 +24,7 @@ Coolify → **Environment** (runtime):
 |----------|---------|
 | `DATABASE_URL` | Internal Postgres URL from Coolify Database |
 | `JWT_SECRET` | `openssl rand -hex 32` |
-| `NEXT_PUBLIC_APP_URL` | `https://survey.kraftstoff.app` |
+| `NEXT_PUBLIC_APP_URL` | `https://kraftsurvey.org` |
 
 Mark `NEXT_PUBLIC_APP_URL` as **Available at Buildtime**.
 
@@ -65,13 +65,13 @@ If **Restarting** or **Unhealthy** → check logs (step 3).
 ### 5. Verify
 
 ```bash
-curl https://survey.kraftstoff.app/api/health
+curl https://kraftsurvey.org/api/health
 ```
 
 Expected: `{"ok":true,"service":"kraftstoff-survey",...}`
 
 ## DNS
 
-`survey.kraftstoff.app` → same origin as `kraftstoff.app` (Cloudflare proxy is OK).
+`kraftsurvey.org` → A record → your Coolify VPS IP (Cloudflare proxy is OK).
 
 503 means the **origin** (Coolify/Traefik) has no backend — not a DNS typo.

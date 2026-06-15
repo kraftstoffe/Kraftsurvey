@@ -40,7 +40,7 @@ foreach ($required in @("COOLIFY_URL", "COOLIFY_TOKEN", "COOLIFY_RESOURCE_UUID")
     }
 }
 
-$HealthUrl = if ($env:HEALTH_URL) { $env:HEALTH_URL } else { "https://survey.kraftstoff.app/api/health" }
+$HealthUrl = if ($env:HEALTH_URL) { $env:HEALTH_URL } else { "https://kraftsurvey.org/api/health" }
 $GitBranch = if ($env:GIT_BRANCH) { $env:GIT_BRANCH } else { "master" }
 $GitRemote = if ($env:GIT_REMOTE) { $env:GIT_REMOTE } else { "origin" }
 $MaxWait = if ($env:MAX_WAIT) { [int]$env:MAX_WAIT } else { 900 }

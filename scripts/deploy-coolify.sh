@@ -48,7 +48,7 @@ source "$ENV_FILE"
 : "${COOLIFY_TOKEN:?Set COOLIFY_TOKEN in scripts/.coolify.env}"
 : "${COOLIFY_RESOURCE_UUID:?Set COOLIFY_RESOURCE_UUID in scripts/.coolify.env}"
 
-HEALTH_URL="${HEALTH_URL:-https://survey.kraftstoff.app/api/health}"
+HEALTH_URL="${HEALTH_URL:-https://kraftsurvey.org/api/health}"
 GIT_BRANCH="${GIT_BRANCH:-master}"
 GIT_REMOTE="${GIT_REMOTE:-origin}"
 MAX_WAIT="${MAX_WAIT:-900}"
