@@ -12,16 +12,22 @@ import {
   Plus,
   Trash2,
 } from "lucide-react";
+import { ErrorMessage, FlashMessage } from "@/components/flash-message";
+import { ConfirmDialog } from "@/components/confirm-dialog";
+import { SurveyBuilderSkeleton } from "@/components/skeleton";
 import {
   defaultLetterOptions,
   getAnswerMode,
   optionLetter,
   parseOptions,
   QUESTION_TYPES,
+  statusClass,
+  statusLabel,
   textTypeFromVariant,
   type QuestionOption,
   type QuestionType,
 } from "@/lib/survey-types";
+import { useFlashMessage } from "@/lib/use-flash-message";
 import { getAppUrl } from "@/lib/utils";
 
 type Question = {
@@ -42,25 +48,56 @@ type Survey = {
   questions: Question[];
 };
 
+type SurveyMetadata = Pick<Survey, "title" | "description" | "status" | "slug">;
+
 export default function SurveyEditPage() {
   const params = useParams();
   const id = params.id as string;
 
   const [survey, setSurvey] = useState<Survey | null>(null);
+  const [localTitle, setLocalTitle] = useState("");
+  const [localDescription, setLocalDescription] = useState("");
   const [loading, setLoading] = useState(true);
+  const [loadError, setLoadError] = useState("");
+  const [retryKey, setRetryKey] = useState(0);
   const [saving, setSaving] = useState(false);
-  const [message, setMessage] = useState("");
+  const [deleteQuestionId, setDeleteQuestionId] = useState<string | null>(null);
+  const { message, variant, showMessage, copyToClipboard } = useFlashMessage();
 
   useEffect(() => {
-    fetch(`/api/surveys/${id}`)
-      .then((r) => r.json())
-      .then((data) => {
-        setSurvey(data.survey ?? null);
-        setLoading(false);
-      });
-  }, [id]);
+    setLoading(true);
+    setLoadError("");
 
-  async function saveSurvey(updates: Partial<Survey>) {
+    fetch(`/api/surveys/${id}`)
+      .then(async (r) => {
+        const data = await r.json();
+        if (!r.ok) {
+          setLoadError(data.error ?? "Umfrage konnte nicht geladen werden");
+          setSurvey(null);
+          return;
+        }
+        if (!data.survey) {
+          setLoadError("Umfrage nicht gefunden");
+          setSurvey(null);
+          return;
+        }
+        setSurvey(data.survey);
+      })
+      .catch(() => {
+        setLoadError("Verbindungsfehler");
+        setSurvey(null);
+      })
+      .finally(() => setLoading(false));
+  }, [id, retryKey]);
+
+  useEffect(() => {
+    if (survey) {
+      setLocalTitle(survey.title);
+      setLocalDescription(survey.description ?? "");
+    }
+  }, [survey?.id]);
+
+  async function saveSurvey(updates: Partial<SurveyMetadata>) {
     if (!survey) return;
     setSaving(true);
     const res = await fetch(`/api/surveys/${id}`, {
@@ -70,10 +107,33 @@ export default function SurveyEditPage() {
     });
     const data = await res.json();
     setSaving(false);
-    if (res.ok) {
-      setSurvey(data.survey);
-      setMessage("Gespeichert");
-      setTimeout(() => setMessage(""), 2000);
+
+    if (res.ok && data.survey) {
+      const saved: SurveyMetadata = data.survey;
+      setSurvey((prev) =>
+        prev
+          ? {
+              ...prev,
+              title: saved.title,
+              description: saved.description,
+              status: saved.status,
+              slug: saved.slug,
+            }
+          : null
+      );
+      if (updates.title !== undefined) setLocalTitle(saved.title);
+      if (updates.description !== undefined) setLocalDescription(saved.description ?? "");
+      showMessage("Gespeichert");
+    } else {
+      showMessage(data.error ?? "Speichern fehlgeschlagen", "error");
+    }
+  }
+
+  function saveMetadata() {
+    if (!survey) return;
+    const desc = localDescription.trim() || null;
+    if (localTitle !== survey.title || desc !== survey.description) {
+      saveSurvey({ title: localTitle, description: localDescription || undefined });
     }
   }
 
@@ -96,6 +156,8 @@ export default function SurveyEditPage() {
       const data = await res.json();
       if (res.ok) {
         setSurvey({ ...survey, questions: [...survey.questions, data.question] });
+      } else {
+        showMessage(data.error ?? "Frage konnte nicht erstellt werden", "error");
       }
       return;
     }
@@ -114,6 +176,8 @@ export default function SurveyEditPage() {
     const data = await res.json();
     if (res.ok) {
       setSurvey({ ...survey, questions: [...survey.questions, data.question] });
+    } else {
+      showMessage(data.error ?? "Frage konnte nicht erstellt werden", "error");
     }
   }
 
@@ -135,15 +199,25 @@ export default function SurveyEditPage() {
     }
   }
 
-  async function deleteQuestion(qid: string) {
-    if (!confirm("Frage löschen?")) return;
-    await fetch(`/api/surveys/${id}/questions/${qid}`, { method: "DELETE" });
-    if (survey) {
+  async function confirmDeleteQuestion() {
+    if (!deleteQuestionId || !survey) return;
+    const qid = deleteQuestionId;
+    setDeleteQuestionId(null);
+
+    const res = await fetch(`/api/surveys/${id}/questions/${qid}`, { method: "DELETE" });
+    if (res.ok) {
       setSurvey({
         ...survey,
         questions: survey.questions.filter((q) => q.id !== qid),
       });
+      return;
     }
+    const data = await res.json().catch(() => ({}));
+    showMessage(data.error ?? "Löschen fehlgeschlagen", "error");
+  }
+
+  async function deleteQuestion(qid: string) {
+    setDeleteQuestionId(qid);
   }
 
   async function moveQuestion(index: number, direction: -1 | 1) {
@@ -157,13 +231,18 @@ export default function SurveyEditPage() {
 
     setSurvey({ ...survey, questions: reordered });
 
-    await fetch(`/api/surveys/${id}/questions`, {
+    const res = await fetch(`/api/surveys/${id}/questions`, {
       method: "PUT",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({
         questions: reordered.map((q) => ({ id: q.id, order: q.order })),
       }),
     });
+
+    if (!res.ok) {
+      setSurvey(survey);
+      showMessage("Reihenfolge konnte nicht gespeichert werden", "error");
+    }
   }
 
   function updateQuestionOptions(qid: string, opts: QuestionOption[]) {
@@ -172,20 +251,28 @@ export default function SurveyEditPage() {
 
   function copyLink() {
     if (!survey) return;
-    navigator.clipboard.writeText(`${getAppUrl()}/s/${survey.slug}`);
-    setMessage("Link kopiert");
-    setTimeout(() => setMessage(""), 2000);
+    copyToClipboard(`${getAppUrl()}/s/${survey.slug}`);
   }
 
-  if (loading) return <p className="text-[var(--text-muted)]">Laden…</p>;
+  if (loading) return <SurveyBuilderSkeleton />;
+  if (loadError) {
+    return (
+      <ErrorMessage message={loadError} onRetry={() => setRetryKey((k) => k + 1)} />
+    );
+  }
   if (!survey) return <p>Umfrage nicht gefunden</p>;
 
   return (
     <div className="max-w-3xl">
       <div className="flex flex-col sm:flex-row sm:items-start justify-between gap-4 mb-6">
         <div>
-          <p className="mono-label mb-1">Survey Builder</p>
-          <h1 className="text-2xl font-bold">{survey.title}</h1>
+          <div className="flex items-center gap-3 mb-1">
+            <p className="mono-label">Survey Builder</p>
+            <span className={`status-pill ${statusClass(survey.status)}`}>
+              {statusLabel(survey.status)}
+            </span>
+          </div>
+          <h1 className="text-2xl font-bold">{localTitle || survey.title}</h1>
         </div>
         <div className="flex flex-wrap gap-2">
           {survey.status === "LIVE" && (
@@ -231,35 +318,48 @@ export default function SurveyEditPage() {
         </div>
       </div>
 
-      {message && (
-        <div className="mb-4 p-3 rounded-[var(--r-sm)] bg-[var(--green-dim)] text-[var(--green)] text-sm">
-          {message}
-        </div>
-      )}
+      <FlashMessage message={message} variant={variant} />
 
       <div className="card p-6 mb-6 space-y-4">
         <div>
-          <label className="mono-label block mb-2">Titel</label>
+          <label htmlFor="survey-title" className="mono-label block mb-2">
+            Titel
+          </label>
           <input
+            id="survey-title"
             className="input"
-            value={survey.title}
-            onChange={(e) => setSurvey({ ...survey, title: e.target.value })}
-            onBlur={() => saveSurvey({ title: survey.title, description: survey.description ?? undefined })}
+            value={localTitle}
+            onChange={(e) => setLocalTitle(e.target.value)}
+            onBlur={saveMetadata}
           />
         </div>
         <div>
-          <label className="mono-label block mb-2">Beschreibung</label>
+          <label htmlFor="survey-description" className="mono-label block mb-2">
+            Beschreibung
+          </label>
           <textarea
+            id="survey-description"
             className="input textarea"
-            value={survey.description ?? ""}
-            onChange={(e) => setSurvey({ ...survey, description: e.target.value })}
-            onBlur={() => saveSurvey({ title: survey.title, description: survey.description ?? undefined })}
+            value={localDescription}
+            onChange={(e) => setLocalDescription(e.target.value)}
+            onBlur={saveMetadata}
           />
         </div>
         <p className="mono-label text-[var(--text-tertiary)]">
-          slug: {survey.slug} · {saving ? "Speichern…" : survey.status}
+          slug: {survey.slug}
+          {saving ? " · Speichern…" : ""}
         </p>
       </div>
+
+      <ConfirmDialog
+        open={!!deleteQuestionId}
+        title="Frage löschen?"
+        description="Diese Frage wird dauerhaft aus der Umfrage entfernt."
+        confirmLabel="Löschen"
+        destructive
+        onConfirm={confirmDeleteQuestion}
+        onCancel={() => setDeleteQuestionId(null)}
+      />
 
       <div className="space-y-4 mb-6">
         {survey.questions.map((question, index) => (

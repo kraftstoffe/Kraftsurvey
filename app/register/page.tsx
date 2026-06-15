@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { FormEvent, useState } from "react";
+import { ThemeToggle } from "@/components/theme-toggle";
 
 export default function RegisterPage() {
   const router = useRouter();
@@ -37,6 +38,9 @@ export default function RegisterPage() {
 
   return (
     <div className="min-h-dvh kraftstoff-bg kraftgeon-grid flex items-center justify-center p-6">
+      <div className="fixed top-4 right-4 z-50">
+        <ThemeToggle />
+      </div>
       <div className="card w-full max-w-md p-8">
         <p className="mono-label mb-2">Ersteller-Konto</p>
         <h1 className="text-2xl font-bold mb-6">Registrieren</h1>

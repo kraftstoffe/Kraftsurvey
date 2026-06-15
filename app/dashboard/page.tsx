@@ -3,6 +3,10 @@
 import Link from "next/link";
 import { useEffect, useState } from "react";
 import { BarChart3, Copy, ExternalLink, Pencil, Plus, Trash2 } from "lucide-react";
+import { ConfirmDialog } from "@/components/confirm-dialog";
+import { ErrorMessage, FlashMessage } from "@/components/flash-message";
+import { SurveyListSkeleton } from "@/components/skeleton";
+import { useFlashMessage } from "@/lib/use-flash-message";
 import { formatDate, getAppUrl } from "@/lib/utils";
 import { statusClass, statusLabel } from "@/lib/survey-types";
 
@@ -19,25 +23,52 @@ type Survey = {
 export default function DashboardPage() {
   const [surveys, setSurveys] = useState<Survey[]>([]);
   const [loading, setLoading] = useState(true);
+  const [loadError, setLoadError] = useState("");
+  const [retryKey, setRetryKey] = useState(0);
+  const [deleteSurveyId, setDeleteSurveyId] = useState<string | null>(null);
+  const { message, variant, showMessage, copyToClipboard } = useFlashMessage();
 
   useEffect(() => {
-    fetch("/api/surveys")
-      .then((r) => r.json())
-      .then((data) => {
-        setSurveys(data.surveys ?? []);
-        setLoading(false);
-      });
-  }, []);
+    setLoading(true);
+    setLoadError("");
 
-  async function handleDelete(id: string) {
-    if (!confirm("Umfrage wirklich löschen?")) return;
-    await fetch(`/api/surveys/${id}`, { method: "DELETE" });
-    setSurveys((prev) => prev.filter((s) => s.id !== id));
+    fetch("/api/surveys")
+      .then(async (r) => {
+        const data = await r.json();
+        if (!r.ok) {
+          setLoadError(data.error ?? "Umfragen konnten nicht geladen werden");
+          setSurveys([]);
+          return;
+        }
+        setSurveys(data.surveys ?? []);
+      })
+      .catch(() => {
+        setLoadError("Verbindungsfehler");
+        setSurveys([]);
+      })
+      .finally(() => setLoading(false));
+  }, [retryKey]);
+
+  async function confirmDeleteSurvey() {
+    if (!deleteSurveyId) return;
+    const surveyId = deleteSurveyId;
+    setDeleteSurveyId(null);
+
+    const res = await fetch(`/api/surveys/${surveyId}`, { method: "DELETE" });
+    if (res.ok) {
+      setSurveys((prev) => prev.filter((s) => s.id !== surveyId));
+      return;
+    }
+    const data = await res.json().catch(() => ({}));
+    showMessage(data.error ?? "Löschen fehlgeschlagen", "error");
+  }
+
+  function handleDelete(id: string) {
+    setDeleteSurveyId(id);
   }
 
   function copyLink(slug: string) {
-    const url = `${getAppUrl()}/s/${slug}`;
-    navigator.clipboard.writeText(url);
+    copyToClipboard(`${getAppUrl()}/s/${slug}`);
   }
 
   return (
@@ -55,8 +86,12 @@ export default function DashboardPage() {
         </Link>
       </div>
 
+      <FlashMessage message={message} variant={variant} />
+
       {loading ? (
-        <p className="text-[var(--text-muted)]">Laden…</p>
+        <SurveyListSkeleton />
+      ) : loadError ? (
+        <ErrorMessage message={loadError} onRetry={() => setRetryKey((k) => k + 1)} />
       ) : surveys.length === 0 ? (
         <div className="card p-12 text-center">
           <p className="text-[var(--text-muted)] mb-4">Noch keine Umfragen</p>
@@ -125,6 +160,16 @@ export default function DashboardPage() {
           ))}
         </div>
       )}
+
+      <ConfirmDialog
+        open={!!deleteSurveyId}
+        title="Umfrage löschen?"
+        description="Die Umfrage und alle Antworten werden dauerhaft gelöscht. Das kann nicht rückgängig gemacht werden."
+        confirmLabel="Löschen"
+        destructive
+        onConfirm={confirmDeleteSurvey}
+        onCancel={() => setDeleteSurveyId(null)}
+      />
     </div>
   );
 }

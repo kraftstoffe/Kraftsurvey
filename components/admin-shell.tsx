@@ -7,19 +7,16 @@ import {
   ClipboardList,
   LogOut,
   Menu,
-  Moon,
   Plus,
-  Sun,
   X,
 } from "lucide-react";
 import { useState } from "react";
 import { cn } from "@/lib/utils";
-import { useTheme } from "./theme-provider";
+import { ThemeToggle } from "./theme-toggle";
 
 export function AdminShell({ children }: { children: React.ReactNode }) {
   const pathname = usePathname();
   const router = useRouter();
-  const { theme, toggleTheme } = useTheme();
   const [sidebarOpen, setSidebarOpen] = useState(false);
 
   async function handleLogout() {
@@ -76,10 +73,7 @@ export function AdminShell({ children }: { children: React.ReactNode }) {
         </nav>
 
         <div className="p-3 border-t border-[var(--border-subtle)] space-y-1">
-          <button type="button" className="sidebar-link w-full" onClick={toggleTheme}>
-            {theme === "dark" ? <Sun size={18} /> : <Moon size={18} />}
-            {theme === "dark" ? "Light Theme" : "Dark Theme"}
-          </button>
+          <ThemeToggle showLabel />
           <button type="button" className="sidebar-link w-full" onClick={handleLogout}>
             <LogOut size={18} />
             Abmelden

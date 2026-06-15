@@ -16,6 +16,9 @@ import {
   YAxis,
 } from "recharts";
 import { Copy, Download } from "lucide-react";
+import { ErrorMessage, FlashMessage } from "@/components/flash-message";
+import { ResultsSkeleton } from "@/components/skeleton";
+import { useFlashMessage } from "@/lib/use-flash-message";
 import { formatDuration, getAppUrl } from "@/lib/utils";
 import { QUESTION_TYPES, type QuestionType } from "@/lib/survey-types";
 
@@ -58,16 +61,39 @@ export default function ResultsPage() {
   const [survey, setSurvey] = useState<{ id: string; title: string; slug: string; status: string } | null>(null);
   const [stats, setStats] = useState<Stats | null>(null);
   const [loading, setLoading] = useState(true);
+  const [loadError, setLoadError] = useState("");
+  const [retryKey, setRetryKey] = useState(0);
+  const { message, variant, copyToClipboard } = useFlashMessage();
 
   useEffect(() => {
+    setLoading(true);
+    setLoadError("");
+
     fetch(`/api/surveys/${id}/stats`)
-      .then((r) => r.json())
-      .then((data) => {
-        setSurvey(data.survey ?? null);
-        setStats(data.stats ?? null);
-        setLoading(false);
-      });
-  }, [id]);
+      .then(async (r) => {
+        const data = await r.json();
+        if (!r.ok) {
+          setLoadError(data.error ?? "Ergebnisse konnten nicht geladen werden");
+          setSurvey(null);
+          setStats(null);
+          return;
+        }
+        if (!data.survey || !data.stats) {
+          setLoadError("Keine Daten verfügbar");
+          setSurvey(null);
+          setStats(null);
+          return;
+        }
+        setSurvey(data.survey);
+        setStats(data.stats);
+      })
+      .catch(() => {
+        setLoadError("Verbindungsfehler");
+        setSurvey(null);
+        setStats(null);
+      })
+      .finally(() => setLoading(false));
+  }, [id, retryKey]);
 
   const csvContent = useMemo(() => {
     if (!stats) return "";
@@ -94,10 +120,15 @@ export default function ResultsPage() {
 
   function copyLink() {
     if (!survey) return;
-    navigator.clipboard.writeText(`${getAppUrl()}/s/${survey.slug}`);
+    copyToClipboard(`${getAppUrl()}/s/${survey.slug}`);
   }
 
-  if (loading) return <p className="text-[var(--text-muted)]">Laden…</p>;
+  if (loading) return <ResultsSkeleton />;
+  if (loadError) {
+    return (
+      <ErrorMessage message={loadError} onRetry={() => setRetryKey((k) => k + 1)} />
+    );
+  }
   if (!survey || !stats) return <p>Keine Daten</p>;
 
   return (
@@ -121,6 +152,8 @@ export default function ResultsPage() {
           </Link>
         </div>
       </div>
+
+      <FlashMessage message={message} variant={variant} />
 
       <div className="kpi-grid mb-8">
         <div className="kpi-card">

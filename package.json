@@ -13,6 +13,7 @@
     "docker:up": "docker compose -f docker-compose.dev.yml up -d --build",
     "docker:down": "docker compose -f docker-compose.dev.yml down",
     "docker:logs": "docker compose -f docker-compose.dev.yml logs -f app",
+    "deploy:coolify": "powershell -NoProfile -ExecutionPolicy Bypass -File scripts/deploy-coolify.ps1",
     "postinstall": "prisma generate"
   },
   "dependencies": {

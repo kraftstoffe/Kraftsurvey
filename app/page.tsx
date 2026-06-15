@@ -1,5 +1,7 @@
 import Link from "next/link";
 import { BarChart3, Link2, ShieldOff } from "lucide-react";
+import { CreatorLoginForm } from "@/components/creator-login-form";
+import { ThemeToggle } from "@/components/theme-toggle";
 
 export default function LandingPage() {
   return (
@@ -8,7 +10,8 @@ export default function LandingPage() {
         <div className="font-semibold text-lg">
           Kraftstoff <span className="text-[var(--accent)]">Survey</span>
         </div>
-        <div className="flex gap-3">
+        <div className="flex items-center gap-2">
+          <ThemeToggle />
           <Link href="/login" className="btn-ghost">
             Anmelden
           </Link>
@@ -32,7 +35,7 @@ export default function LandingPage() {
               </span>
             </h1>
             <p className="text-[var(--text-muted)] text-lg mb-8 max-w-md">
-              Wie Google Forms — aber im Kraftstoff-Design. Teilnehmer brauchen kein Konto,
+              Die Umfrageplattform von Kraftstoff — schlank, schnell, ohne Umwege. Teilnehmer brauchen kein Konto,
               du behältst die volle Kontrolle über Ergebnisse.
             </p>
             <div className="flex flex-wrap gap-3">
@@ -47,30 +50,7 @@ export default function LandingPage() {
 
           <div className="card p-8">
             <h2 className="text-xl font-semibold mb-6">Für Ersteller</h2>
-            <form className="space-y-4" action="/login">
-              <div>
-                <label className="mono-label block mb-2">E-Mail</label>
-                <input
-                  type="email"
-                  className="input"
-                  placeholder="du@beispiel.de"
-                  readOnly
-                />
-              </div>
-              <div>
-                <label className="mono-label block mb-2">Passwort</label>
-                <input type="password" className="input" placeholder="••••••••" readOnly />
-              </div>
-              <Link href="/login" className="btn-primary w-full text-center">
-                Anmelden →
-              </Link>
-              <p className="text-sm text-[var(--text-muted)] text-center">
-                Noch kein Konto?{" "}
-                <Link href="/register" className="text-[var(--accent)] hover:underline">
-                  Registrieren
-                </Link>
-              </p>
-            </form>
+            <CreatorLoginForm compact />
           </div>
         </div>
 

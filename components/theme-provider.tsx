@@ -4,6 +4,15 @@ import { createContext, useContext, useEffect, useState } from "react";
 
 type Theme = "dark" | "lavender-mist";
 
+const STORAGE_KEY = "survey-theme";
+
+function readStoredTheme(): Theme {
+  if (typeof window === "undefined") return "dark";
+  const stored = localStorage.getItem(STORAGE_KEY);
+  if (stored === "dark" || stored === "lavender-mist") return stored;
+  return "dark";
+}
+
 const ThemeContext = createContext<{
   theme: Theme;
   setTheme: (theme: Theme) => void;
@@ -11,18 +20,11 @@ const ThemeContext = createContext<{
 } | null>(null);
 
 export function ThemeProvider({ children }: { children: React.ReactNode }) {
-  const [theme, setThemeState] = useState<Theme>("dark");
-
-  useEffect(() => {
-    const stored = localStorage.getItem("survey-theme") as Theme | null;
-    if (stored === "dark" || stored === "lavender-mist") {
-      setThemeState(stored);
-    }
-  }, []);
+  const [theme, setThemeState] = useState<Theme>(readStoredTheme);
 
   useEffect(() => {
     document.documentElement.setAttribute("data-theme", theme);
-    localStorage.setItem("survey-theme", theme);
+    localStorage.setItem(STORAGE_KEY, theme);
   }, [theme]);
 
   const setTheme = (t: Theme) => setThemeState(t);

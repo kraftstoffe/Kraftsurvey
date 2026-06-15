@@ -1,6 +1,6 @@
 # Kraftstoff Survey
 
-Google-Forms-ähnliche Umfrageplattform im Kraftstoff-Design.
+Umfrageplattform im Kraftstoff-Design.
 
 ## Features
 
