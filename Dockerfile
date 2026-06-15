@@ -42,12 +42,13 @@ COPY --from=builder --chown=nextjs:nodejs /app/.next/static ./.next/static
 COPY --from=builder --chown=nextjs:nodejs /app/node_modules/.prisma ./node_modules/.prisma
 COPY --from=builder --chown=nextjs:nodejs /app/node_modules/@prisma/client ./node_modules/@prisma/client
 COPY scripts/docker-entrypoint.sh ./docker-entrypoint.sh
+COPY scripts/upgrade-db-push.sql ./scripts/upgrade-db-push.sql
 
 RUN npm install prisma@6.9.0 --omit=dev --ignore-scripts \
   && node ./node_modules/prisma/build/index.js generate \
   && npm cache clean --force \
   && chmod +x ./docker-entrypoint.sh \
-  && chown -R nextjs:nodejs /app/node_modules /app/prisma
+  && chown -R nextjs:nodejs /app/node_modules /app/prisma /app/scripts
 
 USER nextjs
 EXPOSE 3000

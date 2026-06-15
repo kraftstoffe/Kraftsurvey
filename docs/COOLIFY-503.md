@@ -36,8 +36,16 @@ Coolify → Survey → **Logs** (service `app`).
 
 **Good:**
 ```
-Applying database schema...
+Applying database migrations...
+Database migrations applied.
 Starting Kraftstoff Survey...
+```
+
+**Bad (restart loop after audit deploy):**
+```
+relation "User" already exists
+```
+The entrypoint now auto-baselines db-push databases. If it still fails, check logs for `Migration failed after baselining`.
 ```
 
 **Bad:**
