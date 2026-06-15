@@ -46,7 +46,6 @@ Starting Kraftstoff Survey...
 relation "User" already exists
 ```
 The entrypoint now auto-baselines db-push databases. If it still fails, check logs for `Migration failed after baselining`.
-```
 
 **Bad:**
 ```
