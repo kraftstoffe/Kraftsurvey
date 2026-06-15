@@ -10,16 +10,16 @@ Umfrageplattform im Kraftstoff-Design.
 - **Ergebnisse** — KPIs, Charts, CSV-Export
 - **Kraftstoff Design** — Dark OLED + Lavender-Mist Light Theme
 
-## Production (kraftsurvey.org)
+## Production (survey.kraftstoff.app)
 
 Deploy via **Coolify** on the Kraftstoff VPS. Full guide: [`docs/DEPLOYMENT.md`](docs/DEPLOYMENT.md)
 
 Quick checklist:
 
-1. DNS: `kraftsurvey.org` → A → your Coolify VPS IP
+1. DNS: `survey.kraftstoff.app` → A → same VPS IP as `kraftstoff.app`
 2. Coolify: new Docker Compose app from `kraftstoffe/Kraftsurvey`
 3. Compose file: `docker-compose.yml`
-4. Domain: `https://kraftsurvey.org:3000`
+4. Domain: `https://survey.kraftstoff.app:3000`
 5. Env: `POSTGRES_PASSWORD`, `JWT_SECRET`, `NEXT_PUBLIC_APP_URL` — **not** `DATABASE_URL` ([details](docs/COOLIFY-DATABASE.md))
 6. Redeploy script: `npm run deploy:coolify` (see [`docs/DEPLOYMENT.md`](docs/DEPLOYMENT.md))
 

@@ -1,12 +1,12 @@
-# Kraftstoff Survey — Coolify production (kraftsurvey.org)
+# Kraftstoff Survey — Coolify production (survey.kraftstoff.app)
 #
 # Compose file: docker-compose.yml
-# Domain (service app): https://kraftsurvey.org:3000
+# Domain (service app): https://survey.kraftstoff.app:3000
 #
 # Coolify Environment (Runtime) — set ONLY these:
 #   POSTGRES_PASSWORD  (openssl rand -hex 16)
 #   JWT_SECRET         (openssl rand -hex 32)
-#   NEXT_PUBLIC_APP_URL = https://kraftsurvey.org  (+ Buildtime)
+#   NEXT_PUBLIC_APP_URL = https://survey.kraftstoff.app  (+ Buildtime)
 #
 # Do NOT add DATABASE_URL or JWT_SECRET here — Coolify locks them in the UI.
 # Runtime DB is SURVEY_DATABASE_URL; runtime auth is JWT_SECRET (see env.coolify.example).
@@ -33,7 +33,7 @@ services:
       context: .
       dockerfile: Dockerfile
       args:
-        NEXT_PUBLIC_APP_URL: ${NEXT_PUBLIC_APP_URL:-https://kraftsurvey.org}
+        NEXT_PUBLIC_APP_URL: ${NEXT_PUBLIC_APP_URL:-https://survey.kraftstoff.app}
     image: kraftstoff-survey:latest
     restart: unless-stopped
     depends_on:
@@ -46,7 +46,7 @@ services:
       # Use SURVEY_DATABASE_URL — Coolify must NOT inject DATABASE_URL (stale build stub overrides compose)
       SURVEY_DATABASE_URL: postgresql://survey:${POSTGRES_PASSWORD}@postgres:5432/kraftstoff_survey?schema=public
       JWT_SECRET: ${JWT_SECRET:?Set JWT_SECRET in Coolify Environment}
-      NEXT_PUBLIC_APP_URL: ${NEXT_PUBLIC_APP_URL:-https://kraftsurvey.org}
+      NEXT_PUBLIC_APP_URL: ${NEXT_PUBLIC_APP_URL:-https://survey.kraftstoff.app}
     healthcheck:
       test:
         [

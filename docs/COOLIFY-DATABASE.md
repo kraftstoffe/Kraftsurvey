@@ -27,7 +27,7 @@ Coolify only allows deleting variables that are no longer referenced in `docker-
 |----------|---------|-----------|
 | `POSTGRES_PASSWORD` | `openssl rand -hex 16` | Off |
 | `JWT_SECRET` | `openssl rand -hex 32` | Off |
-| `NEXT_PUBLIC_APP_URL` | `https://kraftsurvey.org` | **On** |
+| `NEXT_PUBLIC_APP_URL` | `https://survey.kraftstoff.app` | **On** |
 
 Click **Update** on each variable after editing.
 
@@ -44,12 +44,12 @@ Starting Kraftstoff Survey...
 ### 4. Verify
 
 ```bash
-curl https://kraftsurvey.org/api/health
+curl https://survey.kraftstoff.app/api/health
 ```
 
 Expected: `"db":true`
 
-Then register at https://kraftsurvey.org/register
+Then register at https://survey.kraftstoff.app/register
 
 ## Why this happens
 

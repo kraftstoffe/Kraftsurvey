@@ -2,7 +2,7 @@
 
 ## Production URL
 
-**https://kraftsurvey.org**
+**https://survey.kraftstoff.app**
 
 Same VPS and Coolify instance as the other Kraftstoff apps (`kraftstoff.app`, `coach.kraftstoff.app`, etc.).
 
@@ -10,11 +10,10 @@ Same VPS and Coolify instance as the other Kraftstoff apps (`kraftstoff.app`, `c
 
 ## 1. DNS
 
-Add an A record pointing to your Coolify VPS IP:
+Add an A record pointing to the same VPS IP as your other `kraftstoff.app` subdomains:
 
 ```
-kraftsurvey.org  A  <VPS_IP>
-www              A  <VPS_IP>   # optional
+survey.kraftstoff.app  A  <VPS_IP>
 ```
 
 Propagation usually takes 5–30 minutes.
@@ -32,7 +31,7 @@ The compose stack includes **Postgres + App** — no separate Coolify database r
 5. **Server:** same server as Coach / Kraftstoff
 6. **Domain** for the `app` service:
    ```
-   https://kraftsurvey.org:3000
+   https://survey.kraftstoff.app:3000
    ```
 
 See also: [`docs/COOLIFY-DATABASE.md`](COOLIFY-DATABASE.md) if the container restart-loops on `DATABASE_URL` stub.
@@ -47,7 +46,7 @@ Copy from [`env.coolify.example`](../env.coolify.example):
 |----------|-------|-----------|---------|
 | `POSTGRES_PASSWORD` | `openssl rand -hex 16` | Off | **On** |
 | `JWT_SECRET` | `openssl rand -hex 32` | Off | **On** |
-| `NEXT_PUBLIC_APP_URL` | `https://kraftsurvey.org` | **On** | On |
+| `NEXT_PUBLIC_APP_URL` | `https://survey.kraftstoff.app` | **On** | On |
 
 **Do not set `DATABASE_URL`** in Coolify — delete it if present (see [`COOLIFY-DATABASE.md`](COOLIFY-DATABASE.md)).
 
@@ -90,8 +89,8 @@ Required in `scripts/.coolify.env`:
 Verify:
 
 ```bash
-curl -sI https://kraftsurvey.org
-curl -s https://kraftsurvey.org/api/health
+curl -sI https://survey.kraftstoff.app
+curl -s https://survey.kraftstoff.app/api/health
 ```
 
 Expected health response:
