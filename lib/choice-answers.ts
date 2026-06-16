@@ -210,17 +210,32 @@ export function getVisibleQuestions<T extends QuestionLike>(
   );
 }
 
+export function maxSelectionsError(maxSelections: number): string {
+  return maxSelections === 1
+    ? "Bitte wähle höchstens eine Option"
+    : `Bitte wähle höchstens ${maxSelections} Optionen`;
+}
+
 export function validateChoiceAnswer(
   payload: ChoiceAnswerPayload,
   type: QuestionType,
   options: QuestionOption[],
-  required: boolean
+  required: boolean,
+  maxSelections?: number | null
 ): string | null {
   const normalized = normalizeOptions(options);
   const other = getOtherOption(normalized);
 
   if (required && payload.selected.length === 0) {
     return "Bitte beantworte diese Pflichtfrage";
+  }
+
+  if (
+    type === QUESTION_TYPES.MULTIPLE_CHOICE &&
+    maxSelections != null &&
+    payload.selected.length > maxSelections
+  ) {
+    return maxSelectionsError(maxSelections);
   }
 
   if (other && payload.selected.includes(other.label)) {

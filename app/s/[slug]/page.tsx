@@ -86,7 +86,8 @@ function validateQuestion(
       parseChoiceAnswer(val, type),
       type,
       parseOptions(question.options),
-      question.required
+      question.required,
+      question.maxSelections
     );
   }
 
@@ -667,7 +668,12 @@ function QuestionInput({
         )}
       </h2>
 
-      <QuestionTypeHint type={type} required={question.required} id={hintId} />
+      <QuestionTypeHint
+        type={type}
+        required={question.required}
+        maxSelections={question.maxSelections}
+        id={hintId}
+      />
 
       {(type === QUESTION_TYPES.SHORT_TEXT || type === QUESTION_TYPES.LONG_TEXT) &&
         (type === QUESTION_TYPES.LONG_TEXT ? (

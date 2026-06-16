@@ -68,6 +68,7 @@ export async function GET(_request: Request, context: RouteContext) {
         options: q.options,
         required: q.required,
         showIf: q.showIf,
+        maxSelections: q.maxSelections,
         order: q.order,
       })),
     },

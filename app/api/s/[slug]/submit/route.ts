@@ -111,7 +111,8 @@ export async function POST(request: Request, context: RouteContext) {
         payload,
         type,
         parseOptions(question.options),
-        question.required
+        question.required,
+        question.maxSelections
       );
       if (msg) {
         return NextResponse.json({ error: msg }, { status: 400 });

@@ -19,6 +19,7 @@ export type SurveyQuestion = {
   text: string;
   options: string | null;
   required: boolean;
+  maxSelections?: number | null;
   order: number;
   showIf?: string | null;
 };
@@ -60,7 +61,15 @@ export function ChoiceQuestionInput({
 
   function toggleLabel(label: string, multi: boolean) {
     if (multi) {
-      const selected = payload.selected.includes(label)
+      const isSelected = payload.selected.includes(label);
+      if (
+        !isSelected &&
+        question.maxSelections != null &&
+        payload.selected.length >= question.maxSelections
+      ) {
+        return;
+      }
+      const selected = isSelected
         ? payload.selected.filter((l) => l !== label)
         : [...payload.selected, label];
       const opt = options.find((o) => o.label === label);
@@ -168,14 +177,22 @@ export function ChoiceQuestionInput({
         <div className="space-y-2" role="group" {...ariaProps}>
           {options.map((opt, i) => {
             const selected = payload.selected.includes(opt.label);
+            const atMax =
+              question.maxSelections != null &&
+              payload.selected.length >= question.maxSelections;
             return (
               <label
                 key={opt.id}
-                className={cn("checkbox-option", selected && "selected")}
+                className={cn(
+                  "checkbox-option",
+                  selected && "selected",
+                  !selected && atMax && "opacity-50 cursor-not-allowed"
+                )}
               >
                 <input
                   type="checkbox"
                   checked={selected}
+                  disabled={!selected && atMax}
                   onChange={() => toggleLabel(opt.label, true)}
                   className="accent-[var(--accent)]"
                 />

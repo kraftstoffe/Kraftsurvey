@@ -206,6 +206,8 @@ model Question {
 
   required Boolean      @default(false)
 
+  maxSelections Int?
+
   showIf   String?
 
   order    Int

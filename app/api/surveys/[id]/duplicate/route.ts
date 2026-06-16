@@ -49,6 +49,7 @@ export async function POST(_request: Request, context: RouteContext) {
             text: question.text,
             options: question.options,
             required: question.required,
+            maxSelections: question.maxSelections,
             order: question.order,
             showIf: null,
           },

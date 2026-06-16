@@ -3,10 +3,12 @@ import { QUESTION_TYPES, isScaleType, type QuestionType } from "@/lib/survey-typ
 export function QuestionTypeHint({
   type,
   required,
+  maxSelections,
   id,
 }: {
   type: QuestionType;
   required: boolean;
+  maxSelections?: number | null;
   id?: string;
 }) {
   const hints: string[] = [];
@@ -17,7 +19,15 @@ export function QuestionTypeHint({
 
   switch (type) {
     case QUESTION_TYPES.MULTIPLE_CHOICE:
-      hints.push("Mehrfachauswahl — mehrere Optionen möglich");
+      if (maxSelections != null) {
+        hints.push(
+          maxSelections === 1
+            ? "Mehrfachauswahl — maximal 1 Option"
+            : `Mehrfachauswahl — maximal ${maxSelections} Optionen`
+        );
+      } else {
+        hints.push("Mehrfachauswahl — mehrere Optionen möglich");
+      }
       break;
     case QUESTION_TYPES.SINGLE_CHOICE:
     case QUESTION_TYPES.DROPDOWN:

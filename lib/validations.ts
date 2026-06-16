@@ -79,14 +79,21 @@ export const surveyDraftSchema = z
     message: "Entwurf ist zu groß",
   });
 
-export const questionSchema = z.object({
-  type: z.enum(questionTypeValues),
-  text: z.string().min(1, "Fragetext erforderlich").max(2000),
-  options: z.string().max(20_000).nullable().optional(),
-  required: z.boolean().optional(),
-  showIf: z.string().max(2000).nullable().optional(),
-  order: z.number().int().min(0),
-});
+export const questionSchema = z
+  .object({
+    type: z.enum(questionTypeValues),
+    text: z.string().min(1, "Fragetext erforderlich").max(2000),
+    options: z.string().max(20_000).nullable().optional(),
+    required: z.boolean().optional(),
+    maxSelections: z.number().int().min(1).max(100).nullable().optional(),
+    showIf: z.string().max(2000).nullable().optional(),
+    order: z.number().int().min(0),
+  })
+  .refine(
+    (data) =>
+      data.maxSelections == null || data.type === QUESTION_TYPES.MULTIPLE_CHOICE,
+    { message: "Maximale Auswahlen nur bei Mehrfachauswahl", path: ["maxSelections"] }
+  );
 
 export const submitResponseSchema = z.object({
   answers: z

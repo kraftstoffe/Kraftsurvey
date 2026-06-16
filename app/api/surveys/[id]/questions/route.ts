@@ -39,6 +39,7 @@ export async function POST(request: Request, context: RouteContext) {
         text: parsed.data.text,
         options: parsed.data.options ?? null,
         required: parsed.data.required ?? false,
+        maxSelections: parsed.data.maxSelections ?? null,
         order: parsed.data.order,
         showIf: parsed.data.showIf ?? null,
       },

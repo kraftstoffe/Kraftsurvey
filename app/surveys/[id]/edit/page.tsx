@@ -49,6 +49,7 @@ type Question = {
   text: string;
   options: string | null;
   required: boolean;
+  maxSelections: number | null;
   showIf: string | null;
   order: number;
 };
@@ -339,6 +340,7 @@ export default function SurveyEditPage() {
       text: string;
       options: string | null;
       required: boolean;
+      maxSelections: number | null;
       showIf: string | null;
     }>
   ) {
@@ -794,6 +796,7 @@ function QuestionEditor({
       text: string;
       options: string | null;
       required: boolean;
+      maxSelections: number | null;
       showIf: string | null;
     }>
   ) => void;
@@ -1090,15 +1093,41 @@ function QuestionEditor({
                 type="checkbox"
                 checked={type === QUESTION_TYPES.MULTIPLE_CHOICE}
                 onChange={(e) =>
-                  onUpdate({
-                    type: e.target.checked
-                      ? QUESTION_TYPES.MULTIPLE_CHOICE
-                      : QUESTION_TYPES.SINGLE_CHOICE,
-                  })
+                  onUpdate(
+                    e.target.checked
+                      ? { type: QUESTION_TYPES.MULTIPLE_CHOICE }
+                      : { type: QUESTION_TYPES.SINGLE_CHOICE, maxSelections: null }
+                  )
                 }
               />
               Mehrere Antworten erlauben
             </label>
+            {type === QUESTION_TYPES.MULTIPLE_CHOICE && (
+              <label className="mt-3 block text-sm text-[var(--text-muted)]">
+                <span className="block mb-1">Maximale Auswahlen (optional)</span>
+                <input
+                  type="number"
+                  min={1}
+                  max={100}
+                  className="input w-28"
+                  placeholder="Unbegrenzt"
+                  value={question.maxSelections ?? ""}
+                  onChange={(e) => {
+                    const raw = e.target.value.trim();
+                    if (!raw) {
+                      onUpdate({ maxSelections: null });
+                      return;
+                    }
+                    const parsed = Number.parseInt(raw, 10);
+                    if (Number.isNaN(parsed)) return;
+                    onUpdate({ maxSelections: Math.min(100, Math.max(1, parsed)) });
+                  }}
+                />
+                <span className="mt-1 block text-xs text-[var(--text-tertiary)]">
+                  Leer lassen für keine Begrenzung
+                </span>
+              </label>
+            )}
           </div>
         )}
 
