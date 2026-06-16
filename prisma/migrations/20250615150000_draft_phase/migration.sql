@@ -1,0 +1,1 @@
+ALTER TABLE "SurveyDraft" ADD COLUMN IF NOT EXISTS "phase" TEXT NOT NULL DEFAULT 'questions';

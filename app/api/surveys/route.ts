@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { requireSession } from "@/lib/auth";
 import { handleRouteError } from "@/lib/api-error";
 import { prisma } from "@/lib/prisma";
+import { surveyAccessFilter } from "@/lib/survey-access";
 import { generateSlug } from "@/lib/utils";
 import { surveySchema } from "@/lib/validations";
 
@@ -9,11 +10,19 @@ export async function GET() {
   try {
     const { userId } = await requireSession();
     const surveys = await prisma.survey.findMany({
-      where: { ownerId: userId },
-      include: { _count: { select: { responses: true, questions: true } } },
+      where: surveyAccessFilter(userId),
+      include: {
+        _count: { select: { responses: true, questions: true } },
+        owner: { select: { id: true, email: true } },
+      },
       orderBy: { updatedAt: "desc" },
     });
-    return NextResponse.json({ surveys });
+    return NextResponse.json({
+      surveys: surveys.map((s) => ({
+        ...s,
+        isOwner: s.ownerId === userId,
+      })),
+    });
   } catch (error) {
     return handleRouteError(error, "surveys-list");
   }

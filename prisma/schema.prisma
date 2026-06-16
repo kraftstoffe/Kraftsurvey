@@ -1,93 +1,272 @@
 generator client {
+
   provider      = "prisma-client-js"
+
   binaryTargets = ["native", "linux-musl-openssl-3.0.x"]
+
 }
+
+
 
 datasource db {
+
   provider = "postgresql"
+
   url      = env("DATABASE_URL")
+
 }
+
+
 
 enum SurveyStatus {
+
   DRAFT
+
   LIVE
+
   CLOSED
+
 }
+
+
 
 enum QuestionType {
+
   SHORT_TEXT
+
   LONG_TEXT
+
   SINGLE_CHOICE
+
   MULTIPLE_CHOICE
+
   SCALE_5
+
   SCALE_10
+
   YES_NO
+
   DROPDOWN
+
 }
+
+
+
+enum SurveyMemberRole {
+
+  EDITOR
+
+}
+
+
 
 model User {
-  id           String   @id @default(cuid())
-  email        String   @unique
-  passwordHash String
-  name         String?
-  createdAt    DateTime @default(now())
-  updatedAt    DateTime @updatedAt
-  surveys      Survey[]
+
+  id                String         @id @default(cuid())
+
+  email             String         @unique
+
+  passwordHash      String
+
+  name              String?
+
+  createdAt         DateTime       @default(now())
+
+  updatedAt         DateTime       @updatedAt
+
+  surveys           Survey[]
+
+  surveyMemberships SurveyMember[]
+
 }
+
+
 
 model Survey {
-  id          String       @id @default(cuid())
-  title       String
-  description String?
-  slug        String       @unique
-  status      SurveyStatus @default(DRAFT)
-  ownerId     String
-  owner       User         @relation(fields: [ownerId], references: [id], onDelete: Cascade)
-  questions   Question[]
-  responses   Response[]
-  createdAt   DateTime     @default(now())
-  updatedAt   DateTime     @updatedAt
+
+  id                String         @id @default(cuid())
+
+  title             String
+
+  description       String?
+
+  slug              String         @unique
+
+  status            SurveyStatus   @default(DRAFT)
+
+  ownerId           String
+
+  owner             User           @relation(fields: [ownerId], references: [id], onDelete: Cascade)
+
+  thankYouTitle     String?
+
+  thankYouMessage   String?
+
+  thankYouLinkUrl   String?
+
+  thankYouLinkLabel String?
+
+  closedMessage     String?
+
+  questions         Question[]
+
+  responses         Response[]
+
+  members           SurveyMember[]
+
+  drafts            SurveyDraft[]
+
+  createdAt         DateTime       @default(now())
+
+  updatedAt         DateTime       @updatedAt
+
+
 
   @@index([ownerId])
+
   @@index([slug])
+
 }
+
+
+
+model SurveyMember {
+
+  id        String           @id @default(cuid())
+
+  surveyId  String
+
+  survey    Survey           @relation(fields: [surveyId], references: [id], onDelete: Cascade)
+
+  userId    String
+
+  user      User             @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  role      SurveyMemberRole @default(EDITOR)
+
+  createdAt DateTime         @default(now())
+
+
+
+  @@unique([surveyId, userId])
+
+  @@index([userId])
+
+}
+
+
+
+model SurveyDraft {
+
+  id          String   @id @default(cuid())
+
+  surveyId    String
+
+  survey      Survey   @relation(fields: [surveyId], references: [id], onDelete: Cascade)
+
+  tokenHash   String   @unique
+
+  fingerprint String?
+
+  answers     String
+
+  step        Int      @default(0)
+
+  phase       String   @default("questions")
+
+  expiresAt   DateTime
+
+  createdAt   DateTime @default(now())
+
+  updatedAt   DateTime @updatedAt
+
+
+
+  @@index([surveyId])
+
+  @@index([expiresAt])
+
+}
+
+
 
 model Question {
+
   id       String       @id @default(cuid())
+
   surveyId String
+
   survey   Survey       @relation(fields: [surveyId], references: [id], onDelete: Cascade)
+
   type     QuestionType
+
   text     String
+
   options  String?
+
   required Boolean      @default(false)
+
+  showIf   String?
+
   order    Int
+
   answers  Answer[]
 
+
+
   @@index([surveyId])
+
 }
+
+
 
 model Response {
+
   id          String   @id @default(cuid())
+
   surveyId    String
+
   survey      Survey   @relation(fields: [surveyId], references: [id], onDelete: Cascade)
+
   fingerprint String
+
   durationMs  Int?
+
   createdAt   DateTime @default(now())
+
   answers     Answer[]
 
+
+
   @@unique([surveyId, fingerprint])
+
   @@index([surveyId])
+
 }
+
+
 
 model Answer {
+
   id         String   @id @default(cuid())
+
   responseId String
+
   response   Response @relation(fields: [responseId], references: [id], onDelete: Cascade)
+
   questionId String
+
   question   Question @relation(fields: [questionId], references: [id], onDelete: Cascade)
+
   value      String
 
+
+
   @@unique([responseId, questionId])
+
   @@index([responseId])
+
   @@index([questionId])
+
 }
+

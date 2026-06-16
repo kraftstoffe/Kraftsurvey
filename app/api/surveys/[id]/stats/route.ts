@@ -2,7 +2,13 @@ import { NextResponse } from "next/server";
 import { requireSession } from "@/lib/auth";
 import { handleRouteError } from "@/lib/api-error";
 import { prisma } from "@/lib/prisma";
+import { getSurveyForEditor, isSurveyOwner } from "@/lib/survey-access";
 import {
+  formatChoiceAnswerForDisplay,
+  expandChoiceSelections,
+} from "@/lib/choice-answers";
+import {
+  isChoiceType,
   isScaleType,
   isTextType,
   parseOptions,
@@ -20,12 +26,7 @@ export async function GET(_request: Request, context: RouteContext) {
     const { userId } = await requireSession();
     const { id } = await context.params;
 
-    const survey = await prisma.survey.findFirst({
-      where: { id, ownerId: userId },
-      include: {
-        questions: { orderBy: { order: "asc" } },
-      },
-    });
+    const survey = await getSurveyForEditor(id, userId);
 
     if (!survey) {
       return NextResponse.json({ error: "Umfrage nicht gefunden" }, { status: 404 });
@@ -137,16 +138,12 @@ export async function GET(_request: Request, context: RouteContext) {
         }
 
         for (const [value, count] of counts) {
-          if (type === QUESTION_TYPES.MULTIPLE_CHOICE) {
-            try {
-              const values = JSON.parse(value) as string[];
-              for (const v of values) {
-                distribution[v] = (distribution[v] ?? 0) + count;
-              }
-            } catch {
-              distribution[value] = (distribution[value] ?? 0) + count;
+          const selections = expandChoiceSelections(value, type);
+          if (selections.length > 0) {
+            for (const label of selections) {
+              distribution[label] = (distribution[label] ?? 0) + count;
             }
-          } else {
+          } else if (type !== QUESTION_TYPES.MULTIPLE_CHOICE) {
             distribution[value] = (distribution[value] ?? 0) + count;
           }
         }
@@ -210,7 +207,16 @@ export async function GET(_request: Request, context: RouteContext) {
         createdAt: response.createdAt.toISOString(),
       };
       for (const answer of response.answers) {
-        row[answer.questionId] = answer.value;
+        const q = survey.questions.find((item) => item.id === answer.questionId);
+        if (q && isChoiceType(q.type as QuestionType)) {
+          row[answer.questionId] = formatChoiceAnswerForDisplay(
+            answer.value,
+            q.type as QuestionType,
+            parseOptions(q.options)
+          );
+        } else {
+          row[answer.questionId] = answer.value;
+        }
       }
       return row;
     });
@@ -221,6 +227,7 @@ export async function GET(_request: Request, context: RouteContext) {
         title: survey.title,
         slug: survey.slug,
         status: survey.status,
+        isOwner: isSurveyOwner(survey, userId),
       },
       stats: {
         totalResponses,

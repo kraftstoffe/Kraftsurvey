@@ -15,8 +15,9 @@ import {
   XAxis,
   YAxis,
 } from "recharts";
-import { Copy, Download } from "lucide-react";
+import { Copy, Download, Trash2 } from "lucide-react";
 import { ErrorMessage, FlashMessage } from "@/components/flash-message";
+import { ConfirmDialog } from "@/components/confirm-dialog";
 import { ResultsSkeleton } from "@/components/skeleton";
 import { useFlashMessage } from "@/lib/use-flash-message";
 import { formatDuration, getAppUrl } from "@/lib/utils";
@@ -59,12 +60,22 @@ export default function ResultsPage() {
   const params = useParams();
   const id = params.id as string;
 
-  const [survey, setSurvey] = useState<{ id: string; title: string; slug: string; status: string } | null>(null);
+  const [survey, setSurvey] = useState<{
+    id: string;
+    title: string;
+    slug: string;
+    status: string;
+    isOwner?: boolean;
+  } | null>(null);
   const [stats, setStats] = useState<Stats | null>(null);
   const [loading, setLoading] = useState(true);
   const [loadError, setLoadError] = useState("");
   const [retryKey, setRetryKey] = useState(0);
-  const { message, variant, copyToClipboard } = useFlashMessage();
+  const [deleteResponseId, setDeleteResponseId] = useState<string | null>(null);
+  const [bulkDeleteOpen, setBulkDeleteOpen] = useState(false);
+  const [bulkBefore, setBulkBefore] = useState("");
+  const [deleting, setDeleting] = useState(false);
+  const { message, variant, showMessage, copyToClipboard } = useFlashMessage();
 
   useEffect(() => {
     setLoading(true);
@@ -124,6 +135,63 @@ export default function ResultsPage() {
     copyToClipboard(`${getAppUrl()}/s/${survey.slug}`);
   }
 
+  async function confirmDeleteResponse() {
+    if (!deleteResponseId) return;
+    setDeleting(true);
+
+    const res = await fetch(`/api/surveys/${id}/responses/${deleteResponseId}`, {
+      method: "DELETE",
+    });
+
+    setDeleting(false);
+    setDeleteResponseId(null);
+
+    if (!res.ok) {
+      const data = await res.json();
+      showMessage(data.error ?? "Löschen fehlgeschlagen", "error");
+      return;
+    }
+
+    showMessage("Antwort gelöscht");
+    setRetryKey((k) => k + 1);
+  }
+
+  async function confirmBulkDelete() {
+    const deleteAll = !bulkBefore.trim();
+    if (!deleteAll) {
+      const parsed = new Date(bulkBefore);
+      if (Number.isNaN(parsed.getTime())) {
+        showMessage("Ungültiges Datum", "error");
+        return;
+      }
+    }
+
+    setDeleting(true);
+    const body = deleteAll
+      ? { all: true }
+      : { before: new Date(bulkBefore).toISOString() };
+
+    const res = await fetch(`/api/surveys/${id}/responses`, {
+      method: "DELETE",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(body),
+    });
+
+    setDeleting(false);
+    setBulkDeleteOpen(false);
+    setBulkBefore("");
+
+    if (!res.ok) {
+      const data = await res.json().catch(() => ({}));
+      showMessage(data.error ?? "Löschen fehlgeschlagen", "error");
+      return;
+    }
+
+    const data = await res.json();
+    showMessage(`${data.deleted ?? 0} Antworten gelöscht`);
+    setRetryKey((k) => k + 1);
+  }
+
   if (loading) return <ResultsSkeleton />;
   if (loadError) {
     return (
@@ -148,6 +216,15 @@ export default function ResultsPage() {
             <Download size={16} />
             CSV Export
           </button>
+          <button
+            type="button"
+            className="btn-secondary text-sm text-[var(--red)]"
+            disabled={stats.totalResponses === 0 || survey.isOwner === false}
+            onClick={() => setBulkDeleteOpen(true)}
+          >
+            <Trash2 size={16} />
+            Bulk löschen
+          </button>
           <Link href={`/surveys/${id}/edit`} className="btn-ghost text-sm">
             ← Builder
           </Link>
@@ -155,6 +232,45 @@ export default function ResultsPage() {
       </div>
 
       <FlashMessage message={message} variant={variant} />
+
+      <ConfirmDialog
+        open={bulkDeleteOpen}
+        title="Antworten bulk löschen?"
+        description={
+          bulkBefore.trim()
+            ? `Alle Antworten bis einschließlich ${new Date(bulkBefore).toLocaleString("de-DE")} werden gelöscht.`
+            : "Alle Antworten dieser Umfrage werden dauerhaft gelöscht."
+        }
+        confirmLabel={deleting ? "Wird gelöscht…" : "Löschen"}
+        destructive
+        onConfirm={confirmBulkDelete}
+        onCancel={() => !deleting && setBulkDeleteOpen(false)}
+      />
+
+      {bulkDeleteOpen && (
+        <div className="card p-4 mb-6 space-y-3">
+          <p className="text-sm text-[var(--text-muted)]">
+            Optional: Nur Antworten bis zu diesem Zeitpunkt löschen. Feld leer lassen = alle
+            löschen.
+          </p>
+          <input
+            type="datetime-local"
+            className="input"
+            value={bulkBefore}
+            onChange={(e) => setBulkBefore(e.target.value)}
+          />
+        </div>
+      )}
+
+      <ConfirmDialog
+        open={!!deleteResponseId}
+        title="Antwort löschen?"
+        description="Diese Antwort wird dauerhaft aus den Ergebnissen entfernt."
+        confirmLabel={deleting ? "Wird gelöscht…" : "Löschen"}
+        destructive
+        onConfirm={confirmDeleteResponse}
+        onCancel={() => !deleting && setDeleteResponseId(null)}
+      />
 
       {stats.rowsTruncated && (
         <p className="mb-4 text-sm text-[var(--text-muted)]">
@@ -269,6 +385,7 @@ export default function ResultsPage() {
                   {stats.questions.map((q) => (
                     <th key={q.id}>{q.text}</th>
                   ))}
+                  <th aria-label="Aktionen" />
                 </tr>
               </thead>
               <tbody>
@@ -278,6 +395,16 @@ export default function ResultsPage() {
                     {stats.questions.map((q) => (
                       <td key={q.id}>{row[q.id] ?? "—"}</td>
                     ))}
+                    <td className="text-right">
+                      <button
+                        type="button"
+                        className="btn-ghost p-1 text-[var(--red)]"
+                        title="Antwort löschen"
+                        onClick={() => setDeleteResponseId(row.id)}
+                      >
+                        <Trash2 size={16} />
+                      </button>
+                    </td>
                   </tr>
                 ))}
               </tbody>

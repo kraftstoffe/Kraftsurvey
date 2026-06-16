@@ -1,8 +1,9 @@
 "use client";
 
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
-import { BarChart3, Copy, ExternalLink, Pencil, Plus, Trash2 } from "lucide-react";
+import { BarChart3, Copy, CopyPlus, ExternalLink, Pencil, Plus, Trash2 } from "lucide-react";
 import { ConfirmDialog } from "@/components/confirm-dialog";
 import { ErrorMessage, FlashMessage } from "@/components/flash-message";
 import { SurveyListSkeleton } from "@/components/skeleton";
@@ -17,15 +18,19 @@ type Survey = {
   slug: string;
   status: string;
   updatedAt: string;
+  isOwner?: boolean;
+  owner?: { id: string; email: string };
   _count: { responses: number; questions: number };
 };
 
 export default function DashboardPage() {
+  const router = useRouter();
   const [surveys, setSurveys] = useState<Survey[]>([]);
   const [loading, setLoading] = useState(true);
   const [loadError, setLoadError] = useState("");
   const [retryKey, setRetryKey] = useState(0);
   const [deleteSurveyId, setDeleteSurveyId] = useState<string | null>(null);
+  const [duplicatingId, setDuplicatingId] = useState<string | null>(null);
   const { message, variant, showMessage, copyToClipboard } = useFlashMessage();
 
   useEffect(() => {
@@ -71,6 +76,23 @@ export default function DashboardPage() {
     copyToClipboard(`${getAppUrl()}/s/${slug}`);
   }
 
+  async function duplicateSurvey(surveyId: string) {
+    setDuplicatingId(surveyId);
+
+    const res = await fetch(`/api/surveys/${surveyId}/duplicate`, { method: "POST" });
+    const data = await res.json().catch(() => ({}));
+
+    setDuplicatingId(null);
+
+    if (!res.ok) {
+      showMessage(data.error ?? "Kopieren fehlgeschlagen", "error");
+      return;
+    }
+
+    showMessage("Umfrage kopiert");
+    router.push(`/surveys/${data.survey.id}/edit`);
+  }
+
   return (
     <div>
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-8">
@@ -110,10 +132,16 @@ export default function DashboardPage() {
                     <span className={`status-pill ${statusClass(survey.status)}`}>
                       {statusLabel(survey.status)}
                     </span>
+                    {survey.isOwner === false && (
+                      <span className="status-pill draft">Geteilt</span>
+                    )}
                   </div>
                   <p className="text-sm text-[var(--text-muted)]">
                     {survey._count.questions} Fragen · {survey._count.responses} Antworten ·{" "}
                     {formatDate(survey.updatedAt)}
+                    {survey.isOwner === false && survey.owner && (
+                      <> · von {survey.owner.email}</>
+                    )}
                   </p>
                 </div>
 
@@ -126,6 +154,15 @@ export default function DashboardPage() {
                     <BarChart3 size={16} />
                     Ergebnisse
                   </Link>
+                  <button
+                    type="button"
+                    className="btn-secondary text-sm"
+                    disabled={duplicatingId === survey.id}
+                    onClick={() => duplicateSurvey(survey.id)}
+                  >
+                    <CopyPlus size={16} />
+                    {duplicatingId === survey.id ? "Kopiere…" : "Duplizieren"}
+                  </button>
                   {survey.status === "LIVE" && (
                     <>
                       <button
@@ -147,13 +184,15 @@ export default function DashboardPage() {
                       </a>
                     </>
                   )}
-                  <button
-                    type="button"
-                    className="btn-ghost text-sm text-[var(--red)]"
-                    onClick={() => handleDelete(survey.id)}
-                  >
-                    <Trash2 size={16} />
-                  </button>
+                  {survey.isOwner !== false && (
+                    <button
+                      type="button"
+                      className="btn-ghost text-sm text-[var(--red)]"
+                      onClick={() => handleDelete(survey.id)}
+                    >
+                      <Trash2 size={16} />
+                    </button>
+                  )}
                 </div>
               </div>
             </div>

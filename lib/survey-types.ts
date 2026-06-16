@@ -30,16 +30,30 @@ export const QUESTION_TYPE_LABELS: Record<QuestionType, string> = {
   DROPDOWN: "Dropdown",
 };
 
+export type OptionKind = "normal" | "other";
+
 export type QuestionOption = {
   id: string;
   label: string;
+  /** Sonstige-Option mit Freitext (#2 / #4) */
+  kind?: OptionKind;
+  /** Zusatzfeld pro Option (#5) */
+  allowText?: boolean;
+  textPlaceholder?: string;
 };
 
 export function parseOptions(options: string | null | undefined): QuestionOption[] {
   if (!options) return [];
   try {
     const parsed = JSON.parse(options) as QuestionOption[];
-    return Array.isArray(parsed) ? parsed : [];
+    if (!Array.isArray(parsed)) return [];
+    return parsed.map((o) => ({
+      id: o.id,
+      label: o.label,
+      kind: o.kind === "other" ? "other" : undefined,
+      allowText: o.allowText === true,
+      textPlaceholder: o.textPlaceholder,
+    }));
   } catch {
     return [];
   }

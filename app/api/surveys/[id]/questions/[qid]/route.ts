@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { requireSession } from "@/lib/auth";
 import { handleRouteError } from "@/lib/api-error";
 import { prisma } from "@/lib/prisma";
+import { getSurveyForEditor } from "@/lib/survey-access";
 import { questionSchema } from "@/lib/validations";
 
 type RouteContext = { params: Promise<{ id: string; qid: string }> };
@@ -11,9 +12,7 @@ export async function PATCH(request: Request, context: RouteContext) {
     const { userId } = await requireSession();
     const { id: surveyId, qid } = await context.params;
 
-    const survey = await prisma.survey.findFirst({
-      where: { id: surveyId, ownerId: userId },
-    });
+    const survey = await getSurveyForEditor(surveyId, userId);
     if (!survey) {
       return NextResponse.json({ error: "Umfrage nicht gefunden" }, { status: 404 });
     }
@@ -51,9 +50,7 @@ export async function DELETE(_request: Request, context: RouteContext) {
     const { userId } = await requireSession();
     const { id: surveyId, qid } = await context.params;
 
-    const survey = await prisma.survey.findFirst({
-      where: { id: surveyId, ownerId: userId },
-    });
+    const survey = await getSurveyForEditor(surveyId, userId);
     if (!survey) {
       return NextResponse.json({ error: "Umfrage nicht gefunden" }, { status: 404 });
     }
