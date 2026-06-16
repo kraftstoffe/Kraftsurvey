@@ -109,7 +109,6 @@ export default function PublicSurveyPage() {
   const [step, setStep] = useState(0);
   const [answers, setAnswers] = useState<Record<string, AnswerValue>>({});
   const [draftToken, setDraftToken] = useState<string | null>(null);
-  const [draftSaved, setDraftSaved] = useState(false);
   const [submitting, setSubmitting] = useState(false);
   const startTime = useMemo(() => Date.now(), []);
   const inputRef = useRef<FocusableInput>(null);
@@ -158,10 +157,38 @@ export default function PublicSurveyPage() {
           return;
         }
         const data = await r.json();
-        setAnswers(data.answers as Record<string, AnswerValue>);
-        setStep(data.step ?? 0);
-        setPhase(data.phase === "review" ? "review" : "questions");
+        const restoredAnswers = data.answers as Record<string, AnswerValue>;
+        const restoredPhase: Phase = data.phase === "review" ? "review" : "questions";
+        const restoredStep = data.step ?? 0;
+
+        setAnswers(restoredAnswers);
         setDraftToken(stored);
+
+        if (!survey) return;
+
+        const visible = getVisibleQuestions(survey.questions, restoredAnswers);
+        let firstInvalid: { index: number; message: string } | null = null;
+        for (let i = 0; i < visible.length; i++) {
+          const msg = validateQuestion(visible[i], restoredAnswers[visible[i].id]);
+          if (msg) {
+            firstInvalid = { index: i, message: msg };
+            break;
+          }
+        }
+
+        if (restoredPhase === "review") {
+          if (firstInvalid) {
+            setPhase("questions");
+            setStep(firstInvalid.index);
+            setFieldError(firstInvalid.message);
+          } else {
+            setPhase("review");
+            setStep(Math.max(visible.length - 1, 0));
+          }
+        } else {
+          setPhase("questions");
+          setStep(Math.min(restoredStep, Math.max(visible.length - 1, 0)));
+        }
       })
       .catch(() => undefined);
   }, [survey, slug, previewMode]);
@@ -198,8 +225,6 @@ export default function PublicSurveyPage() {
     const data = await res.json();
     setDraftToken(data.token);
     localStorage.setItem(draftStorageKey(slug), data.token);
-    setDraftSaved(true);
-    setTimeout(() => setDraftSaved(false), 2000);
   }, [survey, previewMode, phase, slug, draftToken, answers, step, visibleQuestions.length]);
 
   useEffect(() => {
@@ -233,8 +258,24 @@ export default function PublicSurveyPage() {
     questionPanelRef.current.scrollIntoView({ behavior: "smooth", block: "center" });
   }, [fieldError, step]);
 
+  useEffect(() => {
+    window.scrollTo({ top: 0, left: 0, behavior: "instant" });
+  }, [step, phase]);
+
+  function firstInvalidQuestionIndex(
+    questions: SurveyQuestion[],
+    answerMap: Record<string, AnswerValue>
+  ): { index: number; message: string } | null {
+    for (let i = 0; i < questions.length; i++) {
+      const msg = validateQuestion(questions[i], answerMap[questions[i].id]);
+      if (msg) return { index: i, message: msg };
+    }
+    return null;
+  }
+
   function setAnswer(questionId: string, value: AnswerValue) {
     setFieldError("");
+    setError("");
     setAnswers((prev) => {
       const withNew = { ...prev, [questionId]: value };
       if (!survey) return withNew;
@@ -260,17 +301,29 @@ export default function PublicSurveyPage() {
     if (step < visibleQuestions.length - 1) {
       setStep(step + 1);
       setFieldError("");
-    } else {
-      setPhase("review");
-      setFieldError("");
       setError("");
+      return;
     }
+
+    const invalid = firstInvalidQuestionIndex(visibleQuestions, answers);
+    if (invalid) {
+      setStep(invalid.index);
+      setFieldError(invalid.message);
+      setError("");
+      return;
+    }
+
+    setPhase("review");
+    setFieldError("");
+    setError("");
   }
 
   function handleBack() {
     if (phase === "review") {
       setPhase("questions");
       setStep(Math.max(visibleQuestions.length - 1, 0));
+      setFieldError("");
+      setError("");
       return;
     }
     if (step > 0) {
@@ -282,33 +335,29 @@ export default function PublicSurveyPage() {
   async function handleSubmit() {
     if (!survey) return;
 
-    for (const q of visibleQuestions) {
-      const msg = validateQuestion(q, answers[q.id]);
-      if (msg) {
-        setPhase("questions");
-        setStep(visibleQuestions.findIndex((item) => item.id === q.id));
-        setFieldError(msg);
-        return;
-      }
+    const invalid = firstInvalidQuestionIndex(visibleQuestions, answers);
+    if (invalid) {
+      setPhase("questions");
+      setStep(invalid.index);
+      setFieldError(invalid.message);
+      setError("");
+      return;
     }
 
     setSubmitting(true);
-    const visibleIds = new Set(visibleQuestions.map((q) => q.id));
+    setError("");
 
-    const payload = survey.questions
-      .filter((q) => visibleIds.has(q.id))
-      .map((q) => {
-        const val = answers[q.id];
-        const type = q.type as QuestionType;
-        if (isChoiceQuestionType(type)) {
-          return {
-            questionId: q.id,
-            value: serializeChoiceAnswer(parseChoiceAnswer(val, type)),
-          };
-        }
-        return { questionId: q.id, value: String(val ?? "") };
-      })
-      .filter((a) => a.value.trim() !== "" && a.value !== "[]");
+    const payload = visibleQuestions.map((q) => {
+      const val = answers[q.id];
+      const type = q.type as QuestionType;
+      if (isChoiceQuestionType(type)) {
+        return {
+          questionId: q.id,
+          value: serializeChoiceAnswer(parseChoiceAnswer(val, type)),
+        };
+      }
+      return { questionId: q.id, value: String(val ?? "") };
+    });
 
     const res = await fetch(`/api/s/${slug}/submit`, {
       method: "POST",
@@ -326,6 +375,14 @@ export default function PublicSurveyPage() {
     setSubmitting(false);
 
     if (!res.ok) {
+      const retryInvalid = firstInvalidQuestionIndex(visibleQuestions, answers);
+      if (retryInvalid) {
+        setPhase("questions");
+        setStep(retryInvalid.index);
+        setFieldError(retryInvalid.message);
+        setError("");
+        return;
+      }
       setError(data.error ?? "Senden fehlgeschlagen");
       return;
     }
@@ -451,11 +508,6 @@ export default function PublicSurveyPage() {
             Antworten werden nicht gespeichert.
           </div>
         )}
-        {!previewMode && draftSaved && (
-          <p className="mb-2 text-xs text-[var(--text-muted)]" role="status">
-            Fortschritt gespeichert — du kannst später weitermachen.
-          </p>
-        )}
         <div className="mb-2 flex justify-between text-sm text-[var(--text-muted)]">
           <span>
             {phase === "review"
@@ -490,7 +542,7 @@ export default function PublicSurveyPage() {
             </div>
           )}
 
-          {error && (
+          {error && phase !== "review" && (
             <div className="mb-4 p-3 rounded-[var(--r-sm)] bg-[var(--red-dim)] text-[var(--red)] text-sm" role="alert">
               {error}
             </div>
