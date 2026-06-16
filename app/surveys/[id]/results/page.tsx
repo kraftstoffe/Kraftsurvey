@@ -56,6 +56,41 @@ type Stats = {
 
 const CHART_COLORS = ["#8b5cf6", "#bf5af2", "#9d4edd", "#a855f7", "#7c3aed", "#6d28d9"];
 
+function formatResponseCount(count: number): string {
+  return count === 1 ? "1 Antwort" : `${count} Antworten`;
+}
+
+function DistributionBreakdown({
+  items,
+}: {
+  items: { label: string; count: number; percentage?: number }[];
+}) {
+  const sorted = [...items].sort((a, b) => b.count - a.count || a.label.localeCompare(b.label, "de"));
+
+  return (
+    <details className="rounded-[var(--r-md)] border border-[var(--border-kraftgeon)] bg-[var(--surface-sunken)] md:min-w-[14rem]">
+      <summary className="cursor-pointer list-none px-4 py-3 text-sm font-medium select-none [&::-webkit-details-marker]:hidden">
+        Details anzeigen
+      </summary>
+      <ul className="space-y-2 border-t border-[var(--border-kraftgeon)] px-4 py-3">
+        {sorted.map((item) => (
+          <li key={item.label} className="flex items-start justify-between gap-3 text-sm">
+            <span className="text-[var(--foreground)]">{item.label}</span>
+            <span className="shrink-0 text-right text-[var(--text-muted)]">
+              {formatResponseCount(item.count)}
+              {item.percentage != null && item.count > 0 && (
+                <span className="block text-xs text-[var(--text-tertiary)]">
+                  {item.percentage}%
+                </span>
+              )}
+            </span>
+          </li>
+        ))}
+      </ul>
+    </details>
+  );
+}
+
 export default function ResultsPage() {
   const params = useParams();
   const id = params.id as string;
@@ -305,53 +340,61 @@ export default function ResultsPage() {
             )}
 
             {"distribution" in qs && qs.distribution.length > 0 && (
-              <div className="h-64">
-                <ResponsiveContainer width="100%" height="100%">
-                  {qs.type === QUESTION_TYPES.SINGLE_CHOICE ||
-                  qs.type === QUESTION_TYPES.YES_NO ||
-                  qs.type === QUESTION_TYPES.DROPDOWN ? (
-                    <PieChart>
-                      <Pie
-                        data={qs.distribution}
-                        dataKey="count"
-                        nameKey="label"
-                        cx="50%"
-                        cy="50%"
-                        outerRadius={80}
-                        label={(props) => {
-                          const name = String(props.name ?? props.payload?.label ?? "");
-                          const pct = (props.payload as { percentage?: number })?.percentage ?? 0;
-                          return `${name} (${pct}%)`;
-                        }}
-                      >
-                        {qs.distribution.map((_, i) => (
-                          <Cell key={i} fill={CHART_COLORS[i % CHART_COLORS.length]} />
-                        ))}
-                      </Pie>
-                      <Tooltip
-                        contentStyle={{
-                          background: "var(--surface-elevated)",
-                          border: "1px solid var(--border-subtle)",
-                          borderRadius: 8,
-                        }}
-                      />
-                    </PieChart>
-                  ) : (
-                    <BarChart data={qs.distribution}>
-                      <CartesianGrid stroke="var(--border-kraftgeon)" />
-                      <XAxis dataKey="label" stroke="var(--text-muted)" fontSize={12} />
-                      <YAxis stroke="var(--text-muted)" fontSize={12} />
-                      <Tooltip
-                        contentStyle={{
-                          background: "var(--surface-elevated)",
-                          border: "1px solid var(--border-subtle)",
-                          borderRadius: 8,
-                        }}
-                      />
-                      <Bar dataKey="count" fill={CHART_COLORS[qi % CHART_COLORS.length]} radius={[4, 4, 0, 0]} />
-                    </BarChart>
-                  )}
-                </ResponsiveContainer>
+              <div className="grid gap-4 md:grid-cols-[minmax(0,1fr)_auto] md:items-start">
+                <div className="h-64 min-w-0">
+                  <ResponsiveContainer width="100%" height="100%">
+                    {qs.type === QUESTION_TYPES.SINGLE_CHOICE ||
+                    qs.type === QUESTION_TYPES.YES_NO ||
+                    qs.type === QUESTION_TYPES.DROPDOWN ? (
+                      <PieChart>
+                        <Pie
+                          data={qs.distribution.filter((item) => item.count > 0)}
+                          dataKey="count"
+                          nameKey="label"
+                          cx="50%"
+                          cy="50%"
+                          outerRadius={80}
+                          label={(props) => {
+                            const name = String(props.name ?? props.payload?.label ?? "");
+                            const payload = props.payload as { count?: number; percentage?: number };
+                            const count = payload?.count ?? 0;
+                            const pct = payload?.percentage ?? 0;
+                            if (count <= 0 || pct <= 0) return "";
+                            return `${name} (${pct}%)`;
+                          }}
+                        >
+                          {qs.distribution
+                            .filter((item) => item.count > 0)
+                            .map((_, i) => (
+                              <Cell key={i} fill={CHART_COLORS[i % CHART_COLORS.length]} />
+                            ))}
+                        </Pie>
+                        <Tooltip
+                          contentStyle={{
+                            background: "var(--surface-elevated)",
+                            border: "1px solid var(--border-subtle)",
+                            borderRadius: 8,
+                          }}
+                        />
+                      </PieChart>
+                    ) : (
+                      <BarChart data={qs.distribution}>
+                        <CartesianGrid stroke="var(--border-kraftgeon)" />
+                        <XAxis dataKey="label" stroke="var(--text-muted)" fontSize={12} />
+                        <YAxis stroke="var(--text-muted)" fontSize={12} />
+                        <Tooltip
+                          contentStyle={{
+                            background: "var(--surface-elevated)",
+                            border: "1px solid var(--border-subtle)",
+                            borderRadius: 8,
+                          }}
+                        />
+                        <Bar dataKey="count" fill={CHART_COLORS[qi % CHART_COLORS.length]} radius={[4, 4, 0, 0]} />
+                      </BarChart>
+                    )}
+                  </ResponsiveContainer>
+                </div>
+                <DistributionBreakdown items={qs.distribution} />
               </div>
             )}
 
