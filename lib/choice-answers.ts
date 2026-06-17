@@ -153,7 +153,7 @@ export function formatChoiceAnswerForDisplay(
   return parts.join(", ");
 }
 
-type QuestionLike = {
+export type QuestionLike = {
   id: string;
   type: string;
   options: string | null;
