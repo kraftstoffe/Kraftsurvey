@@ -4,7 +4,7 @@ import { execSync } from "node:child_process";
 
 const root = process.cwd();
 const nodeModules = join(root, "node_modules");
-const destRoot = join(root, ".prisma-runtime/node_modules");
+const destRoot = join(root, ".prisma-cli/node_modules");
 
 mkdirSync(destRoot, { recursive: true });
 
@@ -31,4 +31,4 @@ for (const absPath of tree.split("\n").filter(Boolean)) {
   copyIntoRuntime(rel);
 }
 
-console.log("Staged Prisma runtime into .prisma-runtime/node_modules");
+console.log("Staged Prisma CLI into .prisma-cli/node_modules");
