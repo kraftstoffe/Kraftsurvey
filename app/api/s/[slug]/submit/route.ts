@@ -3,18 +3,13 @@ import { Prisma, SurveyStatus } from "@prisma/client";
 import { getSession } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 import { getClientIp } from "@/lib/client-ip";
-import {
-  getVisibleQuestions,
-  isAnswerEmpty,
-  parseChoiceAnswer,
-  serializeChoiceAnswer,
-  validateChoiceAnswer,
-} from "@/lib/choice-answers";
+import { getVisibleQuestions, parseChoiceAnswer, serializeChoiceAnswer } from "@/lib/choice-answers";
 import { hashDraftToken } from "@/lib/draft-token";
 import { checkRateLimit, rateLimitResponse } from "@/lib/rate-limit";
 import { resolveSubmitFingerprint } from "@/lib/submit-fingerprint";
 import { surveyAccessFilter } from "@/lib/survey-access";
-import { isChoiceType, parseOptions, type QuestionType } from "@/lib/survey-types";
+import { isChoiceType, type QuestionType } from "@/lib/survey-types";
+import { validateSubmitAnswers } from "@/lib/survey-validation";
 import { submitResponseSchema } from "@/lib/validations";
 
 type RouteContext = { params: Promise<{ slug: string }> };
@@ -73,60 +68,31 @@ export async function POST(request: Request, context: RouteContext) {
     request.headers.get("user-agent")
   );
 
-  const questionIds = new Set(survey.questions.map((q) => q.id));
-  const answersMap: Record<string, string> = {};
+  const questionsForValidation = survey.questions.map((q) => ({
+    id: q.id,
+    type: q.type,
+    options: q.options,
+    showIf: q.showIf,
+    required: q.required,
+    maxSelections: q.maxSelections,
+  }));
 
-  for (const answer of answers) {
-    if (!questionIds.has(answer.questionId)) {
-      return NextResponse.json({ error: "Ungültige Frage" }, { status: 400 });
-    }
-    answersMap[answer.questionId] = answer.value;
+  const validationError = validateSubmitAnswers(questionsForValidation, answers);
+  if (validationError) {
+    return NextResponse.json(
+      { error: validationError.message, questionId: validationError.questionId },
+      { status: 400 }
+    );
   }
 
+  const answersMap = Object.fromEntries(answers.map((a) => [a.questionId, a.value]));
   const questionsForVisibility = survey.questions.map((q) => ({
     id: q.id,
     type: q.type,
     options: q.options,
     showIf: q.showIf,
   }));
-
   const visibleQuestions = getVisibleQuestions(questionsForVisibility, answersMap);
-  const visibleIds = new Set(visibleQuestions.map((q) => q.id));
-
-  for (const submitted of answers) {
-    if (!visibleIds.has(submitted.questionId)) {
-      return NextResponse.json({ error: "Ungültige Frage" }, { status: 400 });
-    }
-  }
-
-  for (const question of survey.questions) {
-    if (!visibleIds.has(question.id)) continue;
-
-    const type = question.type as QuestionType;
-    const raw = answersMap[question.id];
-
-    if (isChoiceType(type)) {
-      const payload = parseChoiceAnswer(raw ?? "", type);
-      const msg = validateChoiceAnswer(
-        payload,
-        type,
-        parseOptions(question.options),
-        question.required,
-        question.maxSelections
-      );
-      if (msg) {
-        return NextResponse.json({ error: msg }, { status: 400 });
-      }
-      continue;
-    }
-
-    if (question.required && isAnswerEmpty(raw ?? "", type)) {
-      return NextResponse.json(
-        { error: "Bitte alle Pflichtfragen beantworten" },
-        { status: 400 }
-      );
-    }
-  }
 
   const createAnswers = visibleQuestions
     .map((q) => {
