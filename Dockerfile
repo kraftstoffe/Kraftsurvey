@@ -34,15 +34,13 @@ ENV HOSTNAME=0.0.0.0
 RUN addgroup --system --gid 1001 nodejs \
   && adduser --system --uid 1001 nextjs
 
-COPY --from=builder /app/public ./public
-COPY --from=builder /app/prisma ./prisma
+COPY --from=builder --chown=nextjs:nodejs /app/public ./public
+COPY --from=builder --chown=nextjs:nodejs /app/prisma ./prisma
 COPY --from=builder --chown=nextjs:nodejs /app/.next/standalone ./
 COPY --from=builder --chown=nextjs:nodejs /app/.next/static ./.next/static
-# Keep Next standalone node_modules intact; only overlay generated Prisma client.
 COPY --from=builder --chown=nextjs:nodejs /app/node_modules/.prisma ./node_modules/.prisma
 COPY --from=builder --chown=nextjs:nodejs /app/node_modules/@prisma/client ./node_modules/@prisma/client
-# Prisma CLI + engines live outside app node_modules (used only for migrations).
-COPY --from=builder --chown=nextjs:nodejs /app/.prisma-cli/node_modules/ ./prisma-cli/node_modules/
+COPY --from=builder --chown=nextjs:nodejs /app/.prisma-cli/node_modules/ ./node_modules/
 COPY --chown=nextjs:nodejs scripts/docker-entrypoint.sh ./docker-entrypoint.sh
 COPY --chown=nextjs:nodejs scripts/upgrade-db-push.sql ./scripts/upgrade-db-push.sql
 

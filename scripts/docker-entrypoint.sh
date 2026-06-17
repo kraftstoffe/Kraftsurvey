@@ -34,7 +34,7 @@ if [ -z "$JWT_SECRET" ]; then
   exit 1
 fi
 
-PRISMA="node ./prisma-cli/node_modules/prisma/build/index.js"
+PRISMA="node ./node_modules/prisma/build/index.js"
 INIT_MIGRATION="20250615120000_init"
 
 is_connection_error() {
