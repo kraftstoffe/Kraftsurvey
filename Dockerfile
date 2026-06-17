@@ -40,7 +40,8 @@ COPY --from=builder --chown=nextjs:nodejs /app/.next/standalone ./
 COPY --from=builder --chown=nextjs:nodejs /app/.next/static ./.next/static
 COPY --from=builder --chown=nextjs:nodejs /app/node_modules/.prisma ./node_modules/.prisma
 COPY --from=builder --chown=nextjs:nodejs /app/node_modules/@prisma/client ./node_modules/@prisma/client
-COPY --from=builder --chown=nextjs:nodejs /app/.prisma-cli/node_modules/ ./node_modules/
+# Prisma CLI lives outside app node_modules so migrations do not overwrite Next standalone deps.
+COPY --from=builder --chown=nextjs:nodejs /app/.prisma-cli/node_modules/ ./prisma-cli/node_modules/
 COPY --chown=nextjs:nodejs scripts/docker-entrypoint.sh ./docker-entrypoint.sh
 COPY --chown=nextjs:nodejs scripts/upgrade-db-push.sql ./scripts/upgrade-db-push.sql
 
