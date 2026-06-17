@@ -75,13 +75,25 @@ export function parseChoiceAnswer(
     if (Array.isArray(value)) {
       return { selected: value.map(String) };
     }
-    if (typeof value === "string" && value.startsWith("[")) {
-      try {
-        const arr = JSON.parse(value) as string[];
-        return { selected: Array.isArray(arr) ? arr.map(String) : [] };
-      } catch {
-        return { selected: [] };
+    if (typeof value === "string") {
+      if (value.startsWith("[")) {
+        try {
+          const arr = JSON.parse(value) as string[];
+          return { selected: Array.isArray(arr) ? arr.map(String) : [] };
+        } catch {
+          return { selected: [] };
+        }
       }
+      if (value.startsWith("{")) {
+        try {
+          const parsed = JSON.parse(value) as ChoiceAnswerPayload;
+          if (Array.isArray(parsed.selected)) return parsed;
+        } catch {
+          /* legacy plain label string */
+        }
+      }
+      // Single selection is stored as a plain label (see serializeChoiceAnswer).
+      return { selected: value ? [value] : [] };
     }
     return { selected: [] };
   }
