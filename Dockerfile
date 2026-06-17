@@ -20,6 +20,7 @@ ENV NODE_OPTIONS=--max-old-space-size=1536
 ENV CI=1
 
 RUN npm run build:docker
+RUN node scripts/stage-prisma-runtime.mjs
 
 FROM node:22-alpine AS runner
 RUN apk add --no-cache openssl wget
@@ -35,20 +36,13 @@ RUN addgroup --system --gid 1001 nodejs \
 
 COPY --from=builder /app/public ./public
 COPY --from=builder /app/prisma ./prisma
-COPY --from=builder /app/package.json ./package.json
-COPY --from=builder /app/package-lock.json ./package-lock.json
 COPY --from=builder --chown=nextjs:nodejs /app/.next/standalone ./
 COPY --from=builder --chown=nextjs:nodejs /app/.next/static ./.next/static
-COPY --from=builder --chown=nextjs:nodejs /app/node_modules/.prisma ./node_modules/.prisma
-COPY --from=builder --chown=nextjs:nodejs /app/node_modules/@prisma/client ./node_modules/@prisma/client
-COPY scripts/docker-entrypoint.sh ./docker-entrypoint.sh
-COPY scripts/upgrade-db-push.sql ./scripts/upgrade-db-push.sql
+COPY --from=builder --chown=nextjs:nodejs /app/.prisma-runtime/node_modules/ ./node_modules/
+COPY --chown=nextjs:nodejs scripts/docker-entrypoint.sh ./docker-entrypoint.sh
+COPY --chown=nextjs:nodejs scripts/upgrade-db-push.sql ./scripts/upgrade-db-push.sql
 
-RUN npm install prisma@6.9.0 --omit=dev --ignore-scripts \
-  && node ./node_modules/prisma/build/index.js generate \
-  && npm cache clean --force \
-  && chmod +x ./docker-entrypoint.sh \
-  && chown -R nextjs:nodejs /app/node_modules /app/prisma /app/scripts
+RUN chmod +x ./docker-entrypoint.sh
 
 USER nextjs
 EXPOSE 3000
